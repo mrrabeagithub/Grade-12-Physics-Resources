@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grade 12 LS Physics Portal</title>
+    <title>Grade 10 Physics Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -13,7 +13,7 @@
         .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .card-hover:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 15px 30px -10px rgba(0,0,0,0.5); }
         .search-focus:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
-        .text-shadow-glow { text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+        .text-shadow-glow { text-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="min-h-screen p-6 md:p-12">
@@ -26,7 +26,7 @@
                     <i class="fas fa-home mr-2"></i> Portal
                 </a>
                 <span>/</span>
-                <span id="current-crumb" class="text-blue-500">Resources</span>
+                <span id="current-crumb" class="text-blue-500">Grade 10 Resources</span>
             </nav>
             
             <div class="glass px-4 py-2 rounded-xl flex items-center space-x-3 search-focus transition-all md:w-64">
@@ -38,20 +38,20 @@
         <header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
                 <div class="flex items-center space-x-3 mb-2">
-                    <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest text-shadow-glow">Live Repository Sync</span>
+                    <div class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
+                    <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest text-shadow-glow">Grade 10 Live Sync</span>
                 </div>
                 <h1 id="folder-name" class="text-4xl md:text-5xl font-black text-white mb-3 italic tracking-tighter">Loading...</h1>
                 <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed">
-                    High-fidelity mechanical simulations, derivations, and curriculum resources. 
-                    Automated directory for <strong>Grade 12 LS Physics</strong>.
+                    Exploring the fundamentals of <strong>Electricity</strong>, <strong>Optics</strong>, and <strong>Mechanics</strong>. 
+                    Interactive lab data and simulations for Grade 10 Physics.
                 </p>
             </div>
             <div class="flex items-center space-x-3">
                 <button onclick="loadResources(true)" class="p-3 glass rounded-xl hover:bg-white/10 transition group" title="Force Refresh">
                     <i class="fas fa-sync-alt text-slate-400 group-active:rotate-180 transition-transform duration-500"></i>
                 </button>
-                <a href="https://github.com/mrrabeagithub/Grade-12-LS-Physics-Resources" target="_blank" id="source-link" class="glass px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center border-white/5">
+                <a href="https://github.com/mrrabeagithub/Grade-10-Physics-Resources" target="_blank" id="source-link" class="glass px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center border-white/5">
                     <i class="fab fa-github mr-2 text-base"></i> Source
                 </a>
             </div>
@@ -60,41 +60,28 @@
         <!-- Dynamic Grid -->
         <div id="file-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
-        <!-- Empty State -->
+        <!-- States -->
         <div id="empty-state" class="hidden text-center py-24 glass rounded-3xl border-dashed border-slate-700">
             <i class="fas fa-box-open text-4xl text-slate-700 mb-4"></i>
             <h3 class="text-xl font-bold text-slate-500">No resources found</h3>
-            <p class="text-slate-600 text-sm">Check back later or try a different filter.</p>
+            <p class="text-slate-600 text-sm">Resources for this module are currently being synchronized.</p>
         </div>
 
-        <!-- Loaders -->
         <div id="loader" class="text-center py-24">
             <i class="fas fa-atom fa-spin text-5xl text-blue-600"></i>
-            <p class="text-xs text-slate-500 mt-4 font-bold uppercase tracking-widest">Querying Grade 12 LS Repo...</p>
+            <p class="text-xs text-slate-500 mt-4 font-bold uppercase tracking-widest">Accessing Grade 10 Repo...</p>
         </div>
 
-        <!-- Error State -->
         <div id="error-message" class="hidden glass p-10 rounded-3xl border-red-500/20 text-center">
             <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-4"></i>
-            <h3 class="text-xl font-bold text-white mb-2">Synchronization Interrupted</h3>
-            <p id="error-text" class="text-slate-400 text-sm mb-6"></p>
-            <div class="text-[10px] text-slate-500 bg-slate-900/50 p-6 rounded-2xl inline-block text-left border border-white/5">
-                <p class="font-bold mb-2 text-slate-400 uppercase tracking-widest">Troubleshooting Guide:</p>
-                <ul class="list-disc ml-4 space-y-1">
-                    <li>Confirm the repository visibility is <strong>Public</strong>.</li>
-                    <li>Ensure the folder name on GitHub matches your URL exactly (Case Sensitive).</li>
-                    <li>If you just uploaded, wait 30 seconds for GitHub's API to index the new files.</li>
-                </ul>
-            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Sync Error</h3>
+            <p id="error-text" class="text-slate-400 text-sm"></p>
         </div>
     </div>
 
     <script>
-        /**
-         * TARGET REPOSITORY CONFIGURATION
-         */
         const repoOwner = "mrrabeagithub";
-        const repoName = "Grade-12-LS-Physics-Resources";
+        const repoName = "Grade-10-Physics-Resources";
         let allItems = []; 
         
         function sanitize(str) {
@@ -117,48 +104,35 @@
             errorContainer.classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
 
-            // 1. Resolve path segments from the URL
             const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'index.html');
             const repoIndex = pathSegments.indexOf(repoName);
             
             let segments = [];
             if (repoIndex !== -1) {
-                // Determine current path relative to the repo root on GitHub Pages
                 segments = pathSegments.slice(repoIndex + 1);
             } else {
-                // Local testing fallback: look for 'Chapter-' in the folder path
                 const chapIdx = pathSegments.findIndex(s => s.toLowerCase().startsWith('chapter-'));
                 segments = chapIdx !== -1 ? pathSegments.slice(chapIdx) : [];
             }
 
             const depth = segments.length;
-            // Root navigation logic: points back to the portal root relative to current depth
             rootLink.href = depth > 0 ? "../".repeat(depth) + "index.html" : "index.html";
 
-            // Clean up the segments for the API (Decode %20, & etc.)
             const decodedSegments = segments.map(s => decodeURIComponent(s));
             const currentPath = decodedSegments.join('/');
+            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'Grade 10 Physics Portal';
             
-            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'LS Physics Portal';
             const cleanFolderName = rawFolderName.replace(/-/g, ' ');
-            
             titleElement.innerText = cleanFolderName;
             crumb.innerText = cleanFolderName;
 
-            // 2. Fetch from GitHub API with Cache Busting
             const cacheBuster = force ? `&t=${Date.now()}` : '';
             const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${currentPath}?ref=main${cacheBuster}`;
 
             try {
                 const response = await fetch(apiUrl);
-                
-                if (response.status === 403) {
-                    throw new Error("GitHub API rate limit exceeded. Please wait 60 seconds.");
-                }
-                
-                if (!response.ok) {
-                    throw new Error(`Path not found: "${currentPath}". Ensure this folder exists on GitHub and the repo is Public.`);
-                }
+                if (response.status === 403) throw new Error("API rate limit exceeded. Please wait 60 seconds.");
+                if (!response.ok) throw new Error(`Directory not found on GitHub.`);
 
                 allItems = await response.json();
                 loader.classList.add('hidden');
@@ -177,7 +151,6 @@
 
             const visibleItems = items.filter(item => {
                 const name = item.name.toLowerCase();
-                // Filter index, readme, dotfiles, and desktop junk
                 return !(name === 'index.html' || name === 'readme.md' || name.startsWith('.') || name === 'desktop.ini');
             });
 
@@ -188,7 +161,6 @@
                 emptyState.classList.add('hidden');
             }
 
-            // Directories first, then alphabetical
             visibleItems.sort((a, b) => (a.type === b.type) ? a.name.localeCompare(b.name) : (a.type === 'dir' ? -1 : 1));
 
             visibleItems.forEach(item => {
@@ -196,10 +168,8 @@
                 const ext = item.name.split('.').pop().toLowerCase();
                 
                 if (item.type === 'dir') {
-                    // Navigate into subfolder index
                     card.href = `./${item.name}/index.html`;
                 } else {
-                    // Link directly to the GitHub Pages hosted execution/viewer
                     const pagesBase = `https://${repoOwner}.github.io/${repoName}/`;
                     const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'index.html');
                     const repoIndex = pathSegments.indexOf(repoName);
@@ -216,26 +186,25 @@
                 let accentColor = 'group-hover:text-blue-400';
                 const parentFolder = window.location.pathname.toLowerCase();
 
-                // Dynamic Icon Assignment
                 if (item.type === 'dir') {
-                    icon = 'fa-folder text-amber-500';
-                    typeLabel = 'Sub-Directory';
+                    icon = 'fa-folder text-blue-500';
+                    typeLabel = 'Learning Module';
                     const lowerName = item.name.toLowerCase();
                     if (lowerName.includes('summary')) icon = 'fa-file-invoice text-blue-400';
                     if (lowerName.includes('sim')) icon = 'fa-atom text-emerald-400';
                     if (lowerName.includes('work')) icon = 'fa-tasks text-orange-400';
                 } else if (ext === 'html') {
                     icon = 'fa-play-circle text-emerald-400';
-                    typeLabel = 'Interactive Model';
+                    typeLabel = 'Sim / Interactive';
                     accentColor = 'group-hover:text-emerald-400';
                 } else if (ext === 'pdf') {
                     icon = 'fa-file-pdf text-rose-400';
                     typeLabel = 'PDF Resource';
                     if (parentFolder.includes('summary')) icon = 'fa-file-alt text-blue-400';
                     if (parentFolder.includes('work')) icon = 'fa-pen-nib text-orange-400';
-                } else if (['png', 'jpg', 'jpeg', 'svg'].includes(ext)) {
+                } else if (['png', 'jpg', 'jpeg'].includes(ext)) {
                     icon = 'fa-image text-sky-400';
-                    typeLabel = 'Visual Aid';
+                    typeLabel = 'Diagram';
                 }
 
                 const cleanName = decodeURIComponent(item.name).replace(/-/g, ' ');
@@ -251,14 +220,13 @@
                     </div>
                     <div class="mt-5 pt-4 border-t border-white/5 flex justify-between items-center">
                         <span class="text-[9px] text-slate-600 font-medium">${item.type === 'dir' ? 'Folder' : (item.size / 1024).toFixed(1) + ' KB'}</span>
-                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition duration-300 text-blue-400 font-black uppercase tracking-tighter">View Content</span>
+                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition duration-300 text-blue-400 font-black uppercase tracking-tighter">Open</span>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        // Real-time Search Filter
         document.getElementById('search-input').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
             const filtered = term === '' ? allItems : allItems.filter(item => item.name.toLowerCase().includes(term));
