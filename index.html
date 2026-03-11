@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Resource Portal</title>
+    <title>Grade 12 Physics Resource Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -43,7 +43,7 @@
                 </div>
                 <h1 id="folder-name" class="text-4xl md:text-5xl font-black text-white mb-3 italic tracking-tighter">Loading...</h1>
                 <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed italic">
-                    Accessing synchronized high-fidelity simulations and curriculum materials.
+                    Accessing synchronized high-fidelity simulations, advanced mechanical dynamics, and curriculum materials.
                 </p>
             </div>
             <div class="flex items-center space-x-3">
@@ -129,8 +129,8 @@
             if (repoIndex !== -1) {
                 currentRepo = pathSegments[repoIndex];
             } else {
-                // LOCAL FALLBACK: If not on GitHub, check first folder or default to G10
-                currentRepo = pathSegments.length > 0 ? pathSegments[0] : "Grade-10-Physics-Resources"; 
+                // LOCAL FALLBACK: Defaults to Grade 12 since that is current focus
+                currentRepo = pathSegments.length > 0 ? pathSegments[0] : "Grade-12-Physics-Resources"; 
             }
 
             // 2. RESOLVE SUBPATH
