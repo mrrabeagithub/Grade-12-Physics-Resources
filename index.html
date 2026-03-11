@@ -13,6 +13,7 @@
         .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .card-hover:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 15px 30px -10px rgba(0,0,0,0.5); }
         .search-focus:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .text-glow { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="min-h-screen p-6 md:p-12">
@@ -38,10 +39,10 @@
             <div>
                 <div class="flex items-center space-x-3 mb-2">
                     <div class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
-                    <span id="grade-badge" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest tracking-[0.2em]">Syncing...</span>
+                    <span id="grade-badge" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest tracking-[0.2em] text-glow">Syncing...</span>
                 </div>
                 <h1 id="folder-name" class="text-4xl md:text-5xl font-black text-white mb-3 italic tracking-tighter">Loading...</h1>
-                <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed">
+                <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed italic">
                     Accessing synchronized high-fidelity simulations and curriculum materials.
                 </p>
             </div>
@@ -62,19 +63,21 @@
         <div id="empty-state" class="hidden text-center py-24 glass rounded-3xl border-dashed border-slate-700">
             <i class="fas fa-folder-open text-4xl text-slate-700 mb-4"></i>
             <h3 class="text-xl font-bold text-slate-500">No resources found</h3>
-            <p class="text-slate-600 text-sm mb-6">The current directory on GitHub is empty or the path is mismatched.</p>
-            <div id="debug-info" class="text-[10px] text-slate-500 font-mono bg-black/40 p-4 rounded-xl inline-block text-left border border-white/5">
-                <p class="font-bold text-blue-400 mb-1 uppercase tracking-widest">Technician Debug Console:</p>
+            <p class="text-slate-600 text-sm mb-8">The current directory on GitHub is empty or the path is mismatched.</p>
+            
+            <!-- DEBUG CONSOLE FOR FACILITATOR -->
+            <div id="debug-info" class="text-[10px] text-slate-400 font-mono bg-black/40 p-5 rounded-2xl inline-block text-left border border-white/10 max-w-full overflow-hidden">
+                <p class="font-bold text-blue-400 mb-2 uppercase tracking-widest border-b border-white/5 pb-1">Technician Debug Console</p>
                 <p id="debug-repo">Repo: Detecting...</p>
                 <p id="debug-path">Path: Detecting...</p>
-                <p id="debug-url" class="mt-2 text-[8px] text-slate-600 truncate max-w-xs"></p>
+                <p id="debug-url" class="mt-2 text-[8px] text-slate-600 break-all"></p>
             </div>
         </div>
 
         <!-- Loaders -->
         <div id="loader" class="text-center py-24">
             <i class="fas fa-atom fa-spin text-5xl text-blue-600"></i>
-            <p class="text-xs text-slate-500 mt-4 font-bold uppercase tracking-widest tracking-[0.3em]">Querying GitHub Node...</p>
+            <p class="text-xs text-slate-500 mt-4 font-bold uppercase tracking-[0.3em]">Querying GitHub Node...</p>
         </div>
 
         <div id="error-message" class="hidden glass p-10 rounded-3xl border-red-500/20 text-center">
@@ -116,51 +119,57 @@
             errorContainer.classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
 
-            // 1. IMPROVED REPOSITORY DETECTION
-            // On GitHub Pages, the first segment after the domain is ALWAYS the repo name.
+            // 1. AUTO-DETECT REPOSITORY
             const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'index.html');
             
-            // Logic: The first segment that starts with "Grade-" is our target repo
+            // Find the segment that looks like our repository (Grade-XX-...)
             const repoSegment = pathSegments.find(s => s.toLowerCase().startsWith('grade-'));
             const repoIndex = repoSegment ? pathSegments.indexOf(repoSegment) : -1;
             
             if (repoIndex !== -1) {
                 currentRepo = pathSegments[repoIndex];
             } else {
-                // FALLBACK: If we can't find it in the URL (testing locally), 
-                // we check the folder name of the current file.
-                currentRepo = pathSegments.length > 0 ? pathSegments[0] : "Grade-12-LS-Physics-Resources"; 
+                // LOCAL FALLBACK: If not on GitHub, check first folder or default to G10
+                currentRepo = pathSegments.length > 0 ? pathSegments[0] : "Grade-10-Physics-Resources"; 
             }
 
-            // 2. PATH RESOLUTION
-            // Subpath is everything after the repository name
+            // 2. RESOLVE SUBPATH
             let segments = repoIndex !== -1 ? pathSegments.slice(repoIndex + 1) : [];
             
-            const currentPath = segments.map(s => decodeURIComponent(s)).join('/');
-            const displayTitle = segments.length > 0 ? decodeURIComponent(segments[segments.length - 1]).replace(/-/g, ' ') : "Class Portal";
+            // If segments is empty but we see a "Chapter" in the path (local mode), grab it
+            if (segments.length === 0 && repoIndex === -1) {
+                const chapIdx = pathSegments.findIndex(s => s.toLowerCase().includes('chapter-'));
+                if (chapIdx !== -1) segments = pathSegments.slice(chapIdx);
+            }
 
-            // Update UI
-            titleElement.innerText = displayTitle;
-            crumb.innerText = displayTitle;
+            const decodedSegments = segments.map(s => decodeURIComponent(s));
+            const currentPath = decodedSegments.join('/');
+            
+            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'Class Portal';
+            const cleanFolderName = rawFolderName.replace(/-/g, ' ');
+
+            // UI UPDATES
+            titleElement.innerText = cleanFolderName;
+            crumb.innerText = cleanFolderName;
             badge.innerText = currentRepo.replace(/-/g, ' ');
             sourceLink.href = `https://github.com/${repoOwner}/${currentRepo}`;
             
-            // Update Debug info
             debugRepo.innerText = `Target Repo: ${currentRepo}`;
             debugPath.innerText = `Target Path: "${currentPath}"`;
             debugURL.innerText = window.location.href;
 
+            // Navigation Depth
             const depth = segments.length;
             rootLink.href = depth > 0 ? "../".repeat(depth) + "index.html" : "index.html";
 
-            // 3. API FETCH
+            // 3. API CALL
             const cacheBuster = force ? `&t=${Date.now()}` : '';
             const apiUrl = `https://api.github.com/repos/${repoOwner}/${currentRepo}/contents/${currentPath}?ref=main${cacheBuster}`;
 
             try {
                 const response = await fetch(apiUrl);
                 if (response.status === 403) throw new Error("API rate limit exceeded. Please wait 60 seconds.");
-                if (!response.ok) throw new Error(`Path not found on GitHub API.`);
+                if (!response.ok) throw new Error(`Path not found on GitHub.`);
 
                 allItems = await response.json();
                 loader.classList.add('hidden');
@@ -174,7 +183,7 @@
             } catch (error) {
                 loader.classList.add('hidden');
                 errorText.innerText = error.message;
-                errorDebug.innerText = `Requested: ${apiUrl}`;
+                errorDebug.innerText = `Requested API: ${apiUrl}`;
                 errorContainer.classList.remove('hidden');
                 document.getElementById('empty-state').classList.remove('hidden');
             }
@@ -186,6 +195,7 @@
 
             const visibleItems = items.filter(item => {
                 const name = item.name.toLowerCase();
+                // Filter index, readme, dotfiles, and system junk
                 return !(name === 'index.html' || name === 'readme.md' || name.startsWith('.') || name === 'desktop.ini' || name === 'thumbs.db');
             });
 
@@ -194,6 +204,7 @@
                 return;
             }
 
+            // Dirs first, then alpha
             visibleItems.sort((a, b) => (a.type === b.type) ? a.name.localeCompare(b.name) : (a.type === 'dir' ? -1 : 1));
 
             visibleItems.forEach(item => {
@@ -218,17 +229,17 @@
                 if (item.type === 'dir') {
                     icon = 'fa-folder text-amber-500';
                     typeLabel = 'Module Folder';
-                    const lowName = item.name.toLowerCase();
-                    if (lowName.includes('summary')) icon = 'fa-file-invoice text-blue-400';
-                    if (lowName.includes('sim')) icon = 'fa-atom text-emerald-400';
-                    if (lowName.includes('work')) icon = 'fa-tasks text-orange-400';
+                    const lowerName = item.name.toLowerCase();
+                    if (lowerName.includes('summary')) icon = 'fa-file-invoice text-blue-400';
+                    if (lowerName.includes('sim')) icon = 'fa-atom text-emerald-400';
+                    if (lowerName.includes('work')) icon = 'fa-tasks text-orange-400';
                 } else if (ext === 'html') {
                     icon = 'fa-play-circle text-emerald-400';
                     typeLabel = 'Simulation / App';
                     accentColor = 'group-hover:text-emerald-400';
                 } else if (ext === 'pdf') {
                     icon = 'fa-file-pdf text-rose-400';
-                    typeLabel = 'PDF Resource';
+                    typeLabel = 'PDF Document';
                 } else if (['png', 'jpg', 'jpeg', 'svg'].includes(ext)) {
                     icon = 'fa-image text-sky-400';
                     typeLabel = 'Visual Aid';
@@ -246,8 +257,8 @@
                         <p class="text-[9px] text-slate-500 uppercase tracking-widest font-black">${typeLabel}</p>
                     </div>
                     <div class="mt-5 pt-4 border-t border-white/5 flex justify-between items-center">
-                        <span class="text-[9px] text-slate-600 font-medium">${item.type === 'dir' ? 'Directory' : (item.size / 1024).toFixed(1) + ' KB'}</span>
-                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition duration-300 text-blue-400 font-black uppercase tracking-tighter">Open</span>
+                        <span class="text-[9px] text-slate-600 font-medium">${item.type === 'dir' ? 'Folder' : (item.size / 1024).toFixed(1) + ' KB'}</span>
+                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition duration-300 text-blue-400 font-black uppercase tracking-tighter">View Content</span>
                     </div>
                 `;
                 grid.appendChild(card);
