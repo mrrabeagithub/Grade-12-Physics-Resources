@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GS RLC Oscilloscope Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], processEscapes: true },
+            svg: { fontCache: 'global' },
+            startup: {
+                pageReady: () => {
+                    return MathJax.startup.defaultPageReady().then(() => {
+                        window.mathJaxLoaded = true;
+                        if (typeof renderMath === 'function') renderMath();
+                    });
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { slate: { 850: '#151e2e', 900: '#0f172a' } } } }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .glass-panel { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .dark .glass-panel { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .knob-btn { transition: all 0.1s; }
+        .knob-btn:active { transform: scale(0.95); }
+        .correct-input { border-color: #22c55e !important; background-color: #f0fdf4 !important; color: #166534 !important; }
+        .dark .correct-input { background-color: #064e3b !important; color: #6ee7b7 !important; border-color: #10b981 !important; }
+        .incorrect-input { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #991b1b !important; }
+        .dark .incorrect-input { background-color: #7f1d1d !important; color: #fca5a5 !important; border-color: #ef4444 !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-gray-100 transition-colors duration-300 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-850 shadow-md p-4 flex justify-between items-center z-10 shrink-0">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-blue-700 dark:text-blue-400">RLC AC Simulator</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Oscilloscope Reading & Resonance Acuity (By Rabih A.G.)</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Mode Toggle -->
+            <div class="flex bg-slate-200 dark:bg-slate-800 rounded-lg p-1">
+                <button id="mode-scope" class="px-4 py-1.5 rounded-md text-sm font-bold bg-white dark:bg-slate-600 shadow-sm transition-all">Oscilloscope Lab</button>
+                <button id="mode-res" class="px-4 py-1.5 rounded-md text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all">Resonance Sharpness</button>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none" aria-label="Toggle Dark Mode">
+                <svg id="theme-toggle-light-icon" class="w-7 h-7 hidden" fill="#FFD700" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 1.32a1 1 0 011.415 0l.708.707a1 1 0 01-1.414 1.414l-.708-.707a1 1 0 010-1.414zM16 10a1 1 0 011 1h1a1 1 0 110-2h-1a1 1 0 01-1 1zm-1.32 4.22a1 1 0 010 1.415l-.707.708a1 1 0 01-1.414-1.414l.707-.708a1 1 0 011.414 0zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-4.22-1.32a1 1 0 01-1.415 0l-.708-.707a1 1 0 011.414-1.414l.708.707a1 1 0 010 1.414zM4 10a1 1 0 01-1-1H2a1 1 0 110 2h1a1 1 0 011-1zm1.32-4.22a1 1 0 010-1.415l.707-.708a1 1 0 011.414 1.414l-.707.708a1 1 0 01-1.414 0zM10 4a6 6 0 100 12 6 6 0 000-12z" clip-rule="evenodd" fill-rule="evenodd"></path></svg>
+                <svg id="theme-toggle-dark-icon" class="w-7 h-7 hidden" fill="#C0C0C0" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Sidebar: Circuit Builder -->
+        <aside class="w-full lg:w-1/4 bg-white dark:bg-slate-850 shadow-inner p-6 overflow-y-auto shrink-0 z-0 border-r border-slate-200 dark:border-slate-800 flex flex-col gap-6">
+            
+            <div class="glass-panel p-4 rounded-xl shadow-sm text-center border-t-4 border-blue-500">
+                <h2 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-2">Target Frequency</h2>
+                <div class="flex items-center justify-center gap-4">
+                    <button onclick="adjFreq(-5)" class="knob-btn bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded-full font-bold">-</button>
+                    <span id="disp-f" class="text-2xl font-mono font-black text-blue-600 dark:text-blue-400 w-20">50 Hz</span>
+                    <button onclick="adjFreq(5)" class="knob-btn bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded-full font-bold">+</button>
+                </div>
+                <div class="text-[10px] text-slate-400 mt-2 font-mono">Generator $U_m$ is fixed at 12.0 V</div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-xl shadow-sm">
+                <h2 class="text-sm font-bold mb-4 border-b border-slate-200 dark:border-slate-700 pb-1 text-slate-700 dark:text-slate-300">Circuit Dipoles</h2>
+                
+                <div class="space-y-6">
+                    <!-- Resistor -->
+                    <div>
+                        <label class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-green-600 dark:text-green-400">Viewing Resistor (R)</span>
+                            <span id="val-r" class="font-mono">50 &Omega;</span>
+                        </label>
+                        <input type="range" id="slider-r" min="10" max="200" step="10" value="50" class="w-full accent-green-500">
+                    </div>
+
+                    <!-- Inductor -->
+                    <div>
+                        <label class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-purple-600 dark:text-purple-400">Ideal Inductor (L)</span>
+                            <span id="val-l" class="font-mono">150 mH</span>
+                        </label>
+                        <input type="range" id="slider-l" min="50" max="300" step="10" value="150" class="w-full accent-purple-500">
+                    </div>
+
+                    <!-- Capacitor -->
+                    <div>
+                        <label class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-orange-600 dark:text-orange-400">Capacitor (C)</span>
+                            <span id="val-c" class="font-mono">60 &mu;F</span>
+                        </label>
+                        <input type="range" id="slider-c" min="10" max="150" step="5" value="60" class="w-full accent-orange-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Oscilloscope Sensitivities -->
+            <div id="scope-controls" class="glass-panel p-4 rounded-xl shadow-sm bg-slate-100 dark:bg-slate-800/50">
+                <h2 class="text-sm font-bold mb-3 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    Oscilloscope Settings
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-3 text-center">
+                    <div class="bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
+                        <div class="text-[10px] uppercase font-bold text-red-500 mb-1">CH1: $u_G$</div>
+                        <select id="sel-sv1" class="w-full bg-transparent text-xs font-mono font-bold outline-none cursor-pointer">
+                            <option value="1">1 V/div</option>
+                            <option value="2">2 V/div</option>
+                            <option value="5" selected>5 V/div</option>
+                            <option value="10">10 V/div</option>
+                        </select>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
+                        <div class="text-[10px] uppercase font-bold text-blue-500 mb-1">CH2: $u_R$</div>
+                        <select id="sel-sv2" class="w-full bg-transparent text-xs font-mono font-bold outline-none cursor-pointer">
+                            <option value="0.5">0.5 V/div</option>
+                            <option value="1">1 V/div</option>
+                            <option value="2" selected>2 V/div</option>
+                            <option value="5">5 V/div</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
+                        <div class="text-[10px] uppercase font-bold text-slate-500 mb-1">Time Base ($S_h$)</div>
+                        <select id="sel-sh" class="w-full bg-transparent text-sm font-mono font-bold outline-none cursor-pointer text-center">
+                            <option value="2">2 ms/div</option>
+                            <option value="5" selected>5 ms/div</option>
+                            <option value="10">10 ms/div</option>
+                            <option value="20">20 ms/div</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="res-controls" class="hidden glass-panel p-4 rounded-xl shadow-sm text-sm text-slate-600 dark:text-slate-300">
+                <p class="font-bold mb-2 text-amber-500">Acuity of Resonance</p>
+                <p>Observe how the resistance $R$ affects the bandwidth and maximum current at $f_0$.</p>
+                <p class="mt-2 text-xs">The plot shows $I_m$ vs $f$ for the current $R$ (solid), $R/2$ (sharp), and $2R$ (flat).</p>
+            </div>
+
+        </aside>
+
+        <!-- Right Main: Visualization & Exam -->
+        <main class="flex-1 flex flex-col bg-slate-100 dark:bg-slate-900 relative overflow-hidden">
+            
+            <!-- View 1: Oscilloscope -->
+            <div id="view-scope" class="flex-1 flex flex-col h-full w-full relative">
+                <!-- Oscilloscope Screen Container -->
+                <div class="flex-1 p-4 lg:p-8 flex items-center justify-center bg-slate-200 dark:bg-[#0a0f1a] shadow-inner relative overflow-hidden" id="scope-container">
+                    
+                    <!-- CRT Bezel Styling -->
+                    <div class="w-full max-w-4xl aspect-[5/4] bg-[#0f172a] rounded-3xl p-4 shadow-2xl border-[12px] border-slate-300 dark:border-slate-800 relative flex flex-col">
+                        <div class="absolute inset-0 rounded-xl pointer-events-none shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] z-20"></div>
+                        
+                        <!-- Top Labels -->
+                        <div class="flex justify-between items-center text-[10px] font-mono text-cyan-400 mb-2 px-2 z-10 shrink-0">
+                            <span>TEKTRONIX DUAL TRACE</span>
+                            <span id="osd-sh">5.0 ms/div</span>
+                        </div>
+                        
+                        <!-- The Canvas -->
+                        <div class="flex-1 relative rounded-lg overflow-hidden bg-[#021812]" id="canvas-wrapper">
+                            <!-- Grid and Traces -->
+                            <canvas id="canvas-scope" class="absolute inset-0 w-full h-full z-10"></canvas>
+                            <!-- Glow effect -->
+                            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-500/10 via-transparent to-transparent pointer-events-none z-20"></div>
+                        </div>
+
+                        <!-- Bottom Labels -->
+                        <div class="flex justify-between items-center text-[10px] font-mono mt-2 px-2 z-10 shrink-0">
+                            <span class="text-red-400" id="osd-ch1">CH1 5.0 V/div</span>
+                            <span class="text-blue-400" id="osd-ch2">CH2 2.0 V/div</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Interactive Exam Panel -->
+                <div class="bg-white dark:bg-slate-850 border-t border-slate-200 dark:border-slate-700 shrink-0 p-6 overflow-y-auto max-h-[45vh]">
+                    <h3 class="font-extrabold text-lg mb-4 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Dynamic Exam Challenge
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4" id="exam-container">
+                        <!-- Questions injected dynamically based on current slider states -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 2: Resonance Curves (Hidden by default) -->
+            <div id="view-res" class="flex-1 hidden flex-col h-full w-full p-6">
+                <div class="glass-panel rounded-2xl shadow-lg flex-1 flex flex-col relative overflow-hidden bg-white dark:bg-slate-850">
+                    <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center z-10">
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            Current Resonance ($I_m$ vs $f$)
+                        </h3>
+                        <div class="flex items-center gap-4 text-xs font-mono font-bold">
+                            <div class="flex items-center gap-1"><div class="w-4 h-1 bg-red-500"></div> $R/2$ (Sharp)</div>
+                            <div class="flex items-center gap-1"><div class="w-4 h-1.5 bg-blue-500"></div> Current $R$</div>
+                            <div class="flex items-center gap-1"><div class="w-4 h-1 bg-green-500"></div> $2R$ (Flat)</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative w-full h-full p-4" id="res-wrapper">
+                        <canvas id="canvas-resonance" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        window.mathJaxLoaded = false;
+        
+        // --- THEME MANAGEMENT ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        function updateThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                darkIcon.classList.remove('hidden'); lightIcon.classList.add('hidden');
+            } else {
+                lightIcon.classList.remove('hidden'); darkIcon.classList.add('hidden');
+            }
+        }
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        updateThemeIcons();
+
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            updateThemeIcons();
+        });
+
+        // --- VIEW MODE MANAGEMENT ---
+        const btnScope = document.getElementById('mode-scope');
+        const btnRes = document.getElementById('mode-res');
+        const viewScope = document.getElementById('view-scope');
+        const viewRes = document.getElementById('view-res');
+        const scopeControls = document.getElementById('scope-controls');
+        const resControls = document.getElementById('res-controls');
+
+        function setMode(mode) {
+            if (mode === 'scope') {
+                viewScope.classList.remove('hidden'); viewScope.classList.add('flex');
+                viewRes.classList.add('hidden'); viewRes.classList.remove('flex');
+                
+                btnScope.className = "px-4 py-1.5 rounded-md text-sm font-bold bg-white dark:bg-slate-600 shadow-sm transition-all text-slate-900 dark:text-white";
+                btnRes.className = "px-4 py-1.5 rounded-md text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all";
+                
+                scopeControls.classList.remove('hidden'); resControls.classList.add('hidden');
+            } else {
+                viewRes.classList.remove('hidden'); viewRes.classList.add('flex');
+                viewScope.classList.add('hidden'); viewScope.classList.remove('flex');
+                
+                btnRes.className = "px-4 py-1.5 rounded-md text-sm font-bold bg-white dark:bg-slate-600 shadow-sm transition-all text-slate-900 dark:text-white";
+                btnScope.className = "px-4 py-1.5 rounded-md text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all";
+                
+                resControls.classList.remove('hidden'); scopeControls.classList.add('hidden');
+                
+                // Trigger immediate resize to fix canvas sizing if it was hidden
+                window.dispatchEvent(new Event('resize'));
+            }
+        }
+
+        btnScope.addEventListener('click', () => setMode('scope'));
+        btnRes.addEventListener('click', () => setMode('res'));
+
+        // --- PHYSICS STATE ---
+        const Um_G = 12.0; // Fixed generator voltage
+        let freq = 50; 
+        let R = 50;
+        let L = 150e-3;
+        let C = 60e-6;
+
+        // Sensitivities
+        let Sv1 = 5.0; // V/div for CH1
+        let Sv2 = 2.0; // V/div for CH2
+        let Sh = 0.005; // s/div (5ms)
+
+        // Calculated Truths
+        let truth = { w: 0, Z: 0, Im: 0, Um_R: 0, phi: 0, T: 0, d_divs: 0, D_divs: 0 };
+
+        function renderMath() {
+            if (window.mathJaxLoaded && window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([document.getElementById('exam-container')]).catch(e => console.error(e));
+            }
+        }
+
+        function computePhysics() {
+            truth.w = 2 * Math.PI * freq;
+            truth.T = 1 / freq;
+            let XL = L * truth.w;
+            let XC = 1 / (C * truth.w);
+            
+            truth.Z = Math.sqrt(R*R + Math.pow(XL - XC, 2));
+            truth.Im = Um_G / truth.Z;
+            truth.Um_R = R * truth.Im;
+            
+            // Phase of Voltage relative to Current
+            truth.phi = Math.atan2(XL - XC, R); 
+            
+            // For oscilloscope: 
+            // 1 horizontal div = Sh seconds. Total width = 10 divs.
+            truth.D_divs = truth.T / Sh;
+            
+            // Phase difference formula: phi = 2*pi * d / D  => d = D * phi / (2*pi)
+            // Note: Since phi is U relative to I, if phi > 0, U leads I, so U crosses 0 BEFORE I (to the left).
+            truth.d_divs = truth.D_divs * (Math.abs(truth.phi) / (2 * Math.PI));
+
+            generateExam();
+            requestAnimationFrame(() => { drawScope(); drawResonance(); });
+        }
+
+        // --- UI BINDINGS ---
+        const dispF = document.getElementById('disp-f');
+        window.adjFreq = (delta) => {
+            freq = Math.max(10, Math.min(200, freq + delta));
+            dispF.textContent = `${freq} Hz`;
+            computePhysics();
+        };
+
+        function bindSlider(id, valId, variableSetter, scale = 1, unit = '') {
+            const slider = document.getElementById(id);
+            const valSpan = document.getElementById(valId);
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                valSpan.innerHTML = `${val} ${unit}`;
+                variableSetter(val * scale);
+                computePhysics();
+            });
+        }
+
+        bindSlider('slider-r', 'val-r', v => R = v, 1, '&Omega;');
+        bindSlider('slider-l', 'val-l', v => L = v, 1e-3, 'mH');
+        bindSlider('slider-c', 'val-c', v => C = v, 1e-6, '&mu;F');
+
+        // Knobs
+        const selSv1 = document.getElementById('sel-sv1');
+        const selSv2 = document.getElementById('sel-sv2');
+        const selSh = document.getElementById('sel-sh');
+        
+        const osdCh1 = document.getElementById('osd-ch1');
+        const osdCh2 = document.getElementById('osd-ch2');
+        const osdSh = document.getElementById('osd-sh');
+
+        function updateSensitivities() {
+            Sv1 = parseFloat(selSv1.value);
+            Sv2 = parseFloat(selSv2.value);
+            Sh = parseFloat(selSh.value) / 1000.0; // convert ms to s
+
+            osdCh1.textContent = `CH1 ${Sv1.toFixed(1)} V/div`;
+            osdCh2.textContent = `CH2 ${Sv2.toFixed(1)} V/div`;
+            osdSh.textContent = `${(Sh*1000).toFixed(1)} ms/div`;
+
+            computePhysics();
+        }
+
+        selSv1.addEventListener('change', updateSensitivities);
+        selSv2.addEventListener('change', updateSensitivities);
+        selSh.addEventListener('change', updateSensitivities);
+
+        // --- DYNAMIC EXAM ENGINE ---
+        // Generates questions that depend on the physical screen values
+        function generateExam() {
+            const container = document.getElementById('exam-container');
+            
+            // Build Question Objects
+            const questions = [
+                {
+                    id: 'q1',
+                    text: `Read the maximum amplitude of $u_G(t)$ from <strong>CH1 (Red)</strong>.`,
+                    unit: 'V',
+                    ans: Um_G,
+                    tol: 0.1,
+                    hint: `Look at the red curve. Count vertical divisions (y) from center. Use $U_m = y \\times S_v$. (Currently $S_v = ${Sv1}$ V/div).`
+                },
+                {
+                    id: 'q2',
+                    text: `Read the period $T$ of the signals from the screen.`,
+                    unit: 'ms',
+                    ans: truth.T * 1000, // in ms
+                    tol: 0.05 * (truth.T * 1000), // 5% tolerance
+                    hint: `Count horizontal divisions (D) for one full wave. $T = D \\times S_h$. (Currently $S_h = ${Sh*1000}$ ms/div).`
+                },
+                {
+                    id: 'q3',
+                    text: `Read the maximum amplitude of $u_R(t)$ from <strong>CH2 (Blue)</strong>.`,
+                    unit: 'V',
+                    ans: truth.Um_R,
+                    tol: Sv2 * 0.2, // Tolerance is 0.2 of a division
+                    hint: `Look at the blue curve. Count divisions. Use CH2 $S_v = ${Sv2}$ V/div.`
+                },
+                {
+                    id: 'q4',
+                    text: `Using your answer above and the given $R$, calculate $I_m$.`,
+                    unit: 'A',
+                    ans: truth.Im,
+                    tol: 0.05 * truth.Im,
+                    hint: `Ohm's Law for the viewing resistor: $I_m = \\frac{U_{mR}}{R}$. (R = ${R} $\\Omega$).`
+                },
+                {
+                    id: 'q5',
+                    text: `Using the formula $|\\phi| = 2\\pi \\frac{d}{D}$, calculate the absolute phase shift.`,
+                    unit: 'rad',
+                    ans: Math.abs(truth.phi),
+                    tol: 0.1,
+                    hint: `Count horizontal shift (d) between the two curves crossing the center axis. D is the divisions for a full period.`
+                },
+                {
+                    id: 'q6',
+                    text: `Based on the screen, is the circuit Inductive (type 1) or Capacitive (type -1)?`,
+                    unit: '',
+                    ans: truth.phi > 0 ? 1 : -1,
+                    tol: 0,
+                    hint: `If CH1 (Red, $u_G$) crosses zero *before* CH2 (Blue, $u_R$ image of i), then u leads i -> Inductive (1). If after -> Capacitive (-1).`
+                }
+            ];
+
+            // Render HTML
+            let html = '';
+            questions.forEach(q => {
+                // Determine if there is already a value entered to preserve it
+                let existingInput = document.getElementById(q.id);
+                let val = existingInput ? existingInput.value : '';
+                let classes = "w-24 text-center border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-800 rounded-lg p-2 font-mono outline-none focus:border-blue-500 transition-colors";
+                
+                // Keep styling if previously checked
+                if(existingInput) {
+                    if(existingInput.classList.contains('correct-input')) classes += " correct-input";
+                    if(existingInput.classList.contains('incorrect-input')) classes += " incorrect-input";
+                }
+
+                html += `
+                <div class="flex flex-col gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <label class="text-sm font-medium text-slate-700 dark:text-slate-300">${q.text}</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" step="any" id="${q.id}" value="${val}" class="${classes}" 
+                               data-ans="${q.ans}" data-tol="${q.tol}"
+                               oninput="validateInput('${q.id}')">
+                        <span class="font-bold text-slate-500">${q.unit}</span>
+                        <button onclick="document.getElementById('hint-${q.id}').classList.toggle('hidden')" class="ml-auto text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-1 rounded font-bold hover:bg-amber-200 transition-colors">Hint</button>
+                    </div>
+                    <div id="hint-${q.id}" class="hidden text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded mt-1 border-l-2 border-amber-400">${q.hint}</div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+            renderMath();
+        }
+
+        window.validateInput = (id) => {
+            const el = document.getElementById(id);
+            if (el.value === '') {
+                el.classList.remove('correct-input', 'incorrect-input');
+                return;
+            }
+            const val = parseFloat(el.value);
+            const ans = parseFloat(el.getAttribute('data-ans'));
+            const tol = parseFloat(el.getAttribute('data-tol'));
+
+            if (Math.abs(val - ans) <= tol) {
+                el.classList.add('correct-input');
+                el.classList.remove('incorrect-input');
+            } else {
+                el.classList.add('incorrect-input');
+                el.classList.remove('correct-input');
+            }
+        };
+
+        // --- CANVAS RENDERING ---
+        const cvsScope = document.getElementById('canvas-scope');
+        const ctxScope = cvsScope.getContext('2d');
+        const cvsRes = document.getElementById('canvas-resonance');
+        const ctxRes = cvsRes.getContext('2d');
+
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+            [ {c: cvsScope, cx: ctxScope, p: 'canvas-wrapper'}, {c: cvsRes, cx: ctxRes, p: 'res-wrapper'} ].forEach(obj => {
+                const parent = document.getElementById(obj.p);
+                if (!parent) return;
+                const rect = parent.getBoundingClientRect();
+                if (rect.width === 0) return;
+                
+                obj.c.width = rect.width * dpr;
+                obj.c.height = rect.height * dpr;
+                obj.cx.setTransform(1,0,0,1,0,0);
+                obj.cx.scale(dpr, dpr);
+            });
+            drawScope();
+            drawResonance();
+        }
+
+        const ro = new ResizeObserver(() => requestAnimationFrame(resizeCanvases));
+        ro.observe(document.getElementById('canvas-wrapper'));
+        ro.observe(document.getElementById('res-wrapper'));
+
+        // Tektronix-style Oscilloscope Graticule
+        function drawGraticule(ctx, w, h) {
+            ctx.clearRect(0,0,w,h);
+            
+            // Standard scope has 10 horizontal div, 8 vertical div
+            const hDivs = 10;
+            const vDivs = 8;
+            const dx = w / hDivs;
+            const dy = h / vDivs;
+
+            // Minor grid lines
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.15)'; // faint green
+            ctx.lineWidth = 1;
+            for(let i=0; i<=hDivs*5; i++) {
+                let x = (dx/5) * i;
+                ctx.moveTo(x, 0); ctx.lineTo(x, h);
+            }
+            for(let i=0; i<=vDivs*5; i++) {
+                let y = (dy/5) * i;
+                ctx.moveTo(0, y); ctx.lineTo(w, y);
+            }
+            ctx.stroke();
+
+            // Major grid lines
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)'; // darker green
+            ctx.lineWidth = 1.5;
+            for(let i=0; i<=hDivs; i++) {
+                let x = dx * i;
+                ctx.moveTo(x, 0); ctx.lineTo(x, h);
+            }
+            for(let i=0; i<=vDivs; i++) {
+                let y = dy * i;
+                ctx.moveTo(0, y); ctx.lineTo(w, y);
+            }
+            ctx.stroke();
+
+            // Central Axes (bold with crosshairs)
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)';
+            ctx.lineWidth = 2;
+            
+            const cx = w/2;
+            const cy = h/2;
+            
+            ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+            ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+            
+            // Central ticks
+            for(let i=0; i<=hDivs*5; i++) {
+                let x = (dx/5) * i;
+                let tickH = (i % 5 === 0) ? 6 : 3;
+                ctx.moveTo(x, cy - tickH); ctx.lineTo(x, cy + tickH);
+            }
+            for(let i=0; i<=vDivs*5; i++) {
+                let y = (dy/5) * i;
+                let tickW = (i % 5 === 0) ? 6 : 3;
+                ctx.moveTo(cx - tickW, y); ctx.lineTo(cx + tickW, y);
+            }
+            ctx.stroke();
+
+            return { dx, dy, cx, cy };
+        }
+
+        // Draw Oscilloscope Waves
+        function drawScope() {
+            if (cvsScope.width === 0) return;
+            const w = cvsScope.width / (window.devicePixelRatio || 1);
+            const h = cvsScope.height / (window.devicePixelRatio || 1);
+            
+            const { dx, dy, cx, cy } = drawGraticule(ctxScope, w, h);
+
+            // Mapping:
+            // X-axis: 1 div = Sh seconds. Screen = 10 * Sh seconds.
+            const totalTime = 10 * Sh;
+            const mapX = (t) => (t / totalTime) * w;
+            
+            // Y-axis: 1 div = Sv volts. Screen Height = 8 divs (4 above, 4 below).
+            const mapY = (volts, sv) => cy - (volts / sv) * dy;
+
+            function plot(amp, phase, sv, color) {
+                ctxScope.beginPath();
+                ctxScope.strokeStyle = color;
+                ctxScope.lineWidth = 2.5;
+                ctxScope.lineJoin = 'round';
+                
+                const points = 400; // high res trace
+                for (let j = 0; j <= points; j++) {
+                    let t = (j / points) * totalTime;
+                    // Formula: u(t) = U_m * sin(w*t + phase)
+                    let val = amp * Math.sin(truth.w * t + phase);
+                    let x = mapX(t);
+                    let y = mapY(val, sv);
+                    
+                    if (j === 0) ctxScope.moveTo(x, y);
+                    else ctxScope.lineTo(x, y);
+                }
+                ctxScope.stroke();
+            }
+
+            // In our mathematical setup, i(t) is reference (phase 0).
+            // u_R(t) is in phase with i(t).
+            // u_G(t) leads i(t) by phi.
+            
+            // Plot CH1 (Red): u_G(t)
+            plot(Um_G, truth.phi, Sv1, '#ef4444'); // Red
+
+            // Plot CH2 (Blue): u_R(t) = Image of current
+            plot(truth.Um_R, 0, Sv2, '#3b82f6'); // Blue
+        }
+
+        // Draw Resonance GeoGebra Replica
+        function drawResonance() {
+            if (cvsRes.width === 0) return;
+            const w = cvsRes.width / (window.devicePixelRatio || 1);
+            const h = cvsRes.height / (window.devicePixelRatio || 1);
+            ctxRes.clearRect(0,0,w,h);
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+            const axisColor = isDark ? '#475569' : '#94a3b8';
+
+            // Fixed bounds to show the bell curve
+            const f0 = 1 / (2 * Math.PI * Math.sqrt(L * C));
+            const fMax = Math.max(200, f0 * 2.5);
+            // Imax occurs at f0 with lowest R (R/2) -> Im = Um / (R/2)
+            const iMaxAbs = Um_G / (R / 2) * 1.2;
+
+            const mapF = (f) => (f / fMax) * w;
+            const mapI = (i) => h - (i / iMaxAbs) * h;
+
+            // Grid
+            ctxRes.beginPath(); ctxRes.strokeStyle = gridColor; ctxRes.lineWidth = 1;
+            for(let i=1; i<=10; i++) { let x = mapF((fMax/10) * i); ctxRes.moveTo(x, 0); ctxRes.lineTo(x, h); }
+            for(let i=1; i<=5; i++) { let y = mapI((iMaxAbs/5) * i); ctxRes.moveTo(0, y); ctxRes.lineTo(w, y); }
+            ctxRes.stroke();
+
+            // Draw f0 line
+            const x0 = mapF(f0);
+            ctxRes.beginPath(); ctxRes.strokeStyle = isDark ? '#64748b' : '#94a3b8'; ctxRes.setLineDash([5,5]);
+            ctxRes.moveTo(x0, 0); ctxRes.lineTo(x0, h); ctxRes.stroke(); ctxRes.setLineDash([]);
+            ctxRes.fillStyle = isDark ? '#cbd5e1' : '#475569'; ctxRes.font = '12px sans-serif';
+            ctxRes.fillText('f0', x0 + 5, h - 10);
+
+            // Curve Drawing Function
+            function plotCurve(r_val, color, lineWidth) {
+                ctxRes.beginPath();
+                ctxRes.strokeStyle = color;
+                ctxRes.lineWidth = lineWidth;
+                for (let x = 0; x <= w; x += 2) {
+                    let f = (x / w) * fMax;
+                    if (f === 0) continue;
+                    let w_ang = 2 * Math.PI * f;
+                    let z = Math.sqrt(Math.pow(r_val, 2) + Math.pow(L*w_ang - 1/(C*w_ang), 2));
+                    let im = Um_G / z;
+                    let y = mapI(im);
+                    if (x === 0) ctxRes.moveTo(x, y);
+                    else ctxRes.lineTo(x, y);
+                }
+                ctxRes.stroke();
+            }
+
+            // Plot 3 curves: R/2 (Sharp), R (Current), 2R (Flat)
+            plotCurve(R / 2, '#ef4444', 2); // Red
+            plotCurve(R * 2, '#22c55e', 2); // Green
+            plotCurve(R, '#3b82f6', 4);     // Blue (Main)
+
+            // Current state dot on the main curve
+            const currX = mapF(freq);
+            const currY = mapI(truth.Im);
+            ctxRes.beginPath(); ctxRes.strokeStyle = '#f59e0b'; ctxRes.setLineDash([3,3]);
+            ctxRes.moveTo(currX, h); ctxRes.lineTo(currX, currY); ctxRes.stroke(); ctxRes.setLineDash([]);
+            
+            ctxRes.beginPath(); ctxRes.arc(currX, currY, 6, 0, 2*Math.PI);
+            ctxRes.fillStyle = '#f59e0b'; ctxRes.fill(); ctxRes.strokeStyle = '#fff'; ctxRes.lineWidth=2; ctxRes.stroke();
+        }
+
+        // --- INIT ---
+        computePhysics();
+
+        // Slight delay to ensure fonts and layout finish before canvas paint
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 150);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G12GS: AC RLC Series Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MathJax Configuration to fix LaTeX display issues -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        .dark { background-color: #0f172a; color: #e2e8f0; }
+        .card { background: white; border-radius: 12px; padding: 1.75rem; margin-bottom: 1.25rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025); transition: all 0.3s ease; border: 1px solid #e2e8f0; }
+        .dark .card { background: #1e293b; color: white; border-color: #334155; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+        input[type="number"] { border: 2px solid #cbd5e1; border-radius: 8px; padding: 0.5rem; width: 140px; font-weight: 600; outline: none; transition: all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        .dark input[type="number"] { background: #334155; border-color: #475569; color: white; }
+        input[type="number"]:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .correct { border-color: #22c55e !important; background-color: #f0fdf4 !important; color: #166534; }
+        .dark .correct { background-color: #064e3b !important; color: #6ee7b7; border-color: #10b981 !important; }
+        .incorrect { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #991b1b; }
+        .dark .incorrect { background-color: #7f1d1d !important; color: #fca5a5; border-color: #ef4444 !important; }
+        @media print { .no-print { display: none !important; } .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; } body { background: white; } }
+    </style>
+</head>
+<body class="bg-slate-50 transition-colors duration-300">
+
+    <!-- Navbar -->
+    <nav class="p-4 bg-white dark:bg-slate-900 border-b dark:border-slate-800 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div class="flex items-center gap-3">
+            <span class="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm">G12GS</span>
+            <h1 class="font-bold text-xl hidden sm:block text-slate-800 dark:text-white">AC Sinusoidal Current & RLC Analysis</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Toggle Theme">
+                <svg id="theme-icon" class="w-6 h-6 text-slate-600 dark:text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
+            </button>
+            <div id="user-info" class="hidden text-sm font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-full"></div>
+        </div>
+    </nav>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-md">
+        <div class="bg-white dark:bg-slate-800 p-10 rounded-3xl shadow-2xl w-full max-w-md text-center border border-slate-100 dark:border-slate-700">
+            <h2 class="text-3xl font-extrabold mb-4 text-slate-800 dark:text-white">Class Access</h2>
+            <p class="text-slate-500 dark:text-slate-400 mb-8">Enter your private access code provided by the teacher.</p>
+            <input type="password" id="access-code" placeholder="Enter 4-digit code" class="w-full text-center text-3xl tracking-[0.5em] font-mono p-4 border-2 border-slate-200 dark:border-slate-600 dark:bg-slate-900 rounded-2xl mb-6 outline-none focus:border-blue-500 transition-colors">
+            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/30">Unlock Worksheet</button>
+            <p id="login-error" class="text-red-500 mt-5 text-sm font-bold h-5"></p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto p-4 py-10">
+        <header class="mb-10 border-l-8 border-blue-600 pl-6">
+            <h2 class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">Decomposed RLC Circuit Analysis</h2>
+            <p class="text-lg text-slate-600 dark:text-slate-400 mt-2 font-medium">Ascending Difficulty: From Source Basics to Blended Dipoles</p>
+        </header>
+
+        <!-- Given Information Panel -->
+        <section class="mb-8 border-2 border-blue-100 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
+            <h3 class="font-extrabold text-xl mb-4 text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Given Information
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
+                <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <p class="font-bold mb-2 text-slate-700 dark:text-slate-300">AC Source Voltage:</p>
+                    <p class="text-2xl font-mono text-center text-blue-600 dark:text-blue-400 py-2">$u(t) = 141 \sin(100\pi t)$ V</p>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <p class="font-bold mb-2 text-slate-700 dark:text-slate-300">Series Components:</p>
+                    <ul class="list-none space-y-2 font-medium">
+                        <li class="flex justify-between items-center"><span class="text-slate-500">Resistor (R)</span> <span>$10 \, \Omega$</span></li>
+                        <li class="flex justify-between items-center"><span class="text-slate-500">Inductor (L)</span> <span>$0.2$ H (pure)</span></li>
+                        <li class="flex justify-between items-center"><span class="text-slate-500">Capacitor (C)</span> <span>$50 \, \mu$F</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Questions Injection Container -->
+        <div id="questions-container" class="space-y-6">
+            <!-- Questions rendered via JS -->
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-4 mt-12 mb-20 no-print">
+            <button onclick="gradeWorksheet()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-extrabold text-xl py-5 rounded-2xl shadow-xl shadow-green-600/20 transition-all transform hover:-translate-y-1">Submit & Record Results</button>
+            <button onclick="window.print()" class="px-8 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold text-lg py-5 rounded-2xl transition-all shadow-md">Print PDF Worksheet</button>
+        </div>
+    </main>
+
+    <!-- Feedback Toast -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-blue-600 text-white px-8 py-4 rounded-full shadow-2xl font-bold text-lg hidden z-50 animate-bounce transition-all"></div>
+
+    <script>
+        const CONFIG = {
+            grade: "Grade 12 GS",
+            topic: "AC RLC Series Analysis",
+            url: "https://script.google.com/macros/s/AKfycbyj6r-9cG_h5GG9aFonm0sT8QeFZFnmjXmRiH0B8ZU2T5l8clPVRNrSJtPD68qf-dhYnw/exec",
+            students: {"احمد / محمود / مشحاوي": "7799", "هادي / عمر / ابراهيم": "8963"},
+            special: {"Teacher": "0000", "Tutor": "1111"}
+        };
+
+        const DATA = [
+            // PART A: Source
+            { id: 1, section: "Part A: AC Source Parameters", q: "What is the maximum voltage amplitude $U_m$?", h: "Look at the coefficient of the sine function in the given equation.", a: 141, unit: "V" },
+            { id: 2, q: "Calculate the effective voltage $U_{eff}$ (to nearest integer).", h: "$U_{eff} = U_m / \\sqrt{2}$. Note: $141 \\approx 100\\sqrt{2}$", a: 100, unit: "V" },
+            { id: 3, q: "Identify the angular frequency $\\omega$ (2 decimal places).", h: "$\\omega$ is the coefficient of $t$ in the sine argument. Calculate $100\\pi$.", a: 314.16, unit: "rad/s" },
+            { id: 4, q: "Calculate the linear frequency $f$ of the current.", h: "$f = \\omega / 2\\pi$", a: 50, unit: "Hz" },
+
+            // PART B: Individual Dipoles
+            { id: 5, section: "Part B: Individual Dipole Characteristics", q: "If ONLY the pure resistor $R$ is connected to the source, what is the maximum current amplitude $I_{m}$?", h: "Use Ohm's Law for a resistor: $I_m = U_m / R$", a: 14.1, unit: "A" },
+            { id: 6, q: "What is the phase difference $\\phi_{u/i}$ for this pure resistor?", h: "Voltage and current are completely in phase for a pure resistor.", a: 0, unit: "rad" },
+            { id: 7, q: "If ONLY the pure inductor $L$ is connected, calculate its inductive reactance $X_L$ (2 decimal places).", h: "$X_L = L \\cdot \\omega$", a: 62.83, unit: "Ω" },
+            { id: 8, q: "What is the phase difference $\\phi_{u/i}$ for this pure inductor? (2 decimal places)", h: "Voltage LEADS current by $\\pi/2$ radians in a pure inductor. Calculate $\\pi/2$.", a: 1.57, unit: "rad" },
+            { id: 9, q: "If ONLY the capacitor $C$ is connected, calculate its capacitive reactance $X_C$ (2 decimal places).", h: "$X_C = 1 / (C \\cdot \\omega)$. Remember to convert microfarads: $50\\mu F = 50 \\times 10^{-6}$ F.", a: 63.66, unit: "Ω" },
+            { id: 10, q: "What is the phase difference $\\phi_{u/i}$ for this pure capacitor? (2 decimal places)", h: "Voltage LAGS current by $\\pi/2$ radians. Use a negative sign: $-\\pi/2$.", a: -1.57, unit: "rad" },
+
+            // PART C: Blended Circuit
+            { id: 11, section: "Part C: Blended RLC Series Circuit", q: "Calculate the total equivalent impedance $Z$ of the entire series circuit (2 decimal places).", h: "$Z = \\sqrt{R^2 + (X_L - X_C)^2}$", a: 10.03, unit: "Ω" },
+            { id: 12, q: "Find the effective current $I_{eff}$ flowing in the series circuit (2 decimal places).", h: "Use the generalized Ohm's Law: $I_{eff} = U_{eff} / Z$", a: 9.97, unit: "A" },
+            { id: 13, q: "Find the phase difference $\\phi_{u/i}$ of the main voltage relative to the current in the series circuit (2 decimal places).", h: "$\\tan \\phi = (X_L - X_C) / R$. Find the arctangent of this ratio.", a: -0.08, unit: "rad" },
+            { id: 14, q: "Calculate the average active power $P_{av}$ consumed by the entire circuit (integer).", h: "Only the resistor consumes active power: $P_{av} = R \\cdot I_{eff}^2$", a: 994, unit: "W" }
+        ];
+
+        let currentUser = null;
+
+        function login() {
+            const code = document.getElementById('access-code').value;
+            const error = document.getElementById('login-error');
+            
+            // Check students
+            for (let [name, sCode] of Object.entries(CONFIG.students)) {
+                if (code === sCode) { currentUser = name; break; }
+            }
+            // Check special roles
+            if (!currentUser) {
+                for (let [role, rCode] of Object.entries(CONFIG.special)) {
+                    if (code === rCode) { currentUser = role; break; }
+                }
+            }
+
+            if (currentUser) {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('user-info').textContent = "👤 " + currentUser;
+                document.getElementById('user-info').classList.remove('hidden');
+                renderQuestions();
+            } else {
+                error.textContent = "Invalid access code. Please try again.";
+            }
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            let htmlStr = '';
+
+            DATA.forEach((item, idx) => {
+                if (item.section) {
+                    htmlStr += `
+                        <div class="mt-14 mb-6 flex items-center gap-4">
+                            <h3 class="text-2xl font-black text-slate-800 dark:text-slate-100">${item.section}</h3>
+                            <div class="flex-1 h-1 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                        </div>`;
+                }
+
+                htmlStr += `
+                <div class="card relative group">
+                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full">Step ${item.id}</span>
+                            </div>
+                            <p class="text-xl font-medium text-slate-800 dark:text-slate-200 mb-5 leading-relaxed">${item.q}</p>
+                            
+                            <div class="flex items-center gap-3">
+                                <input type="number" step="any" id="q-${item.id}" class="text-lg" placeholder="Answer..." onchange="checkLive(${item.id})" oninput="checkLive(${item.id})">
+                                <span class="font-bold text-slate-500 dark:text-slate-400 text-xl">${item.unit}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-shrink-0 pt-2 md:pt-0">
+                            <button onclick="toggleHint(${item.id})" class="no-print px-5 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 dark:text-amber-300 font-bold rounded-xl text-sm flex items-center gap-2 transition-all border border-amber-200 dark:border-amber-700/50 shadow-sm">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                                Show Hint
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Highly Visible Hint Container -->
+                    <div id="hint-${item.id}" class="hidden mt-6 bg-amber-50 dark:bg-amber-900/40 border-l-4 border-amber-500 text-amber-900 dark:text-amber-200 p-5 rounded-r-xl text-base shadow-inner">
+                        <strong class="font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mr-2">Hint:</strong> 
+                        <span class="font-medium">${item.h}</span>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = htmlStr;
+            
+            // Re-render MathJax
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        function toggleHint(id) {
+            const el = document.getElementById(`hint-${id}`);
+            el.classList.toggle('hidden');
+        }
+
+        function checkLive(id) {
+            const input = document.getElementById(`q-${id}`);
+            if (input.value === "") {
+                input.className = "text-lg"; // reset
+                return;
+            }
+            const val = parseFloat(input.value);
+            const target = DATA.find(d => d.id === id).a;
+            
+            // Allow 2% error margin
+            if (Math.abs(val - target) <= Math.abs(target * 0.02) || (target === 0 && Math.abs(val) < 0.05)) {
+                input.className = "text-lg correct";
+            } else {
+                input.className = "text-lg incorrect";
+            }
+        }
+
+        async function gradeWorksheet() {
+            let score = 0;
+            let detail = [];
+            
+            DATA.forEach(item => {
+                const input = document.getElementById(`q-${item.id}`);
+                const val = parseFloat(input.value) || 0;
+                // Specific logic for 0 handling included here
+                const isCorrect = Math.abs(val - item.a) <= Math.abs(item.a * 0.02) || (item.a === 0 && Math.abs(val) < 0.05);
+                
+                if (isCorrect) score++;
+                detail.push(`Q${item.id}: ${isCorrect ? 'Correct' : 'Incorrect'} (${val})`);
+            });
+
+            const percent = Math.round((score / DATA.length) * 100);
+            showToast(`Submitting... Score: ${percent}%`);
+
+            const payload = {
+                name: currentUser,
+                score: percent,
+                topic: CONFIG.topic,
+                answers: detail.join(", ")
+            };
+
+            try {
+                await fetch(CONFIG.url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                });
+                showToast(`Successfully Submitted! Final Score: ${percent}%`);
+            } catch (e) {
+                showToast("Connection Error. Please print as PDF instead.");
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 4000);
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+    </script>
+</body>
+</html>
