@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resource Gallery</title>
+    <title>Grade 12 Physics Resource Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -13,6 +13,7 @@
         .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .card-hover:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 15px 30px -10px rgba(0,0,0,0.5); }
         .search-focus:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .text-glow { text-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
     </style>
 </head>
 <body class="min-h-screen p-6 md:p-12">
@@ -30,72 +31,68 @@
             
             <div class="glass px-4 py-2 rounded-xl flex items-center space-x-3 search-focus transition-all md:w-64">
                 <i class="fas fa-search text-slate-500 text-sm"></i>
-                <input type="text" id="search-input" placeholder="Filter resources..." class="bg-transparent border-none outline-none text-sm text-white placeholder-slate-600 w-full">
+                <input type="text" id="search-input" placeholder="Search Grade 12 assets..." class="bg-transparent border-none outline-none text-sm text-white placeholder-slate-600 w-full">
             </div>
         </div>
 
         <header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
                 <div class="flex items-center space-x-3 mb-2">
-                    <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Live Sync Active</span>
+                    <div class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
+                    <span id="grade-badge" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest tracking-[0.2em] text-glow">Grade 12 Physics</span>
                 </div>
                 <h1 id="folder-name" class="text-4xl md:text-5xl font-black text-white mb-3 italic tracking-tighter">Loading...</h1>
-                <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed">
-                    Access high-fidelity mechanical simulations and resources. 
-                    Automated resource directory for Grade 12 LS Physics.
+                <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed italic">
+                    Accessing advanced mechanics, electromagnetism, and high-fidelity simulations for **Grade 12**.
                 </p>
             </div>
             <div class="flex items-center space-x-3">
                 <button onclick="loadResources(true)" class="p-3 glass rounded-xl hover:bg-white/10 transition group" title="Force Refresh">
                     <i class="fas fa-sync-alt text-slate-400 group-active:rotate-180 transition-transform duration-500"></i>
                 </button>
-                <a href="https://github.com/mrrabeagithub/Grade-12 LS-Physics-Resources" target="_blank" id="source-link" class="glass px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center border-white/5">
+                <a href="#" id="source-link" target="_blank" class="glass px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center border-white/5">
                     <i class="fab fa-github mr-2 text-base"></i> Source
                 </a>
             </div>
         </header>
 
         <!-- Dynamic Grid -->
-        <div id="file-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Items injected here -->
-        </div>
+        <div id="file-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
-        <!-- Empty State -->
+        <!-- States -->
         <div id="empty-state" class="hidden text-center py-24 glass rounded-3xl border-dashed border-slate-700">
-            <i class="fas fa-box-open text-4xl text-slate-700 mb-4"></i>
-            <h3 class="text-xl font-bold text-slate-500">No resources found</h3>
-            <p class="text-slate-600 text-sm">Check back later or try a different filter.</p>
+            <i class="fas fa-folder-open text-4xl text-slate-700 mb-4"></i>
+            <h3 id="empty-state-title" class="text-xl font-bold text-slate-500">Directory Synchronizing</h3>
+            <p id="empty-state-desc" class="text-slate-600 text-sm mb-8">No files found. Ensure the GitHub folder name matches exactly.</p>
+            
+            <!-- DEBUG CONSOLE FOR THE TECHNICIAN -->
+            <div id="debug-info" class="text-[10px] text-slate-400 font-mono bg-black/40 p-5 rounded-2xl inline-block text-left border border-white/10 max-w-full">
+                <p class="font-bold text-blue-400 mb-2 uppercase tracking-widest border-b border-white/5 pb-1">Technician Debug Console</p>
+                <p id="debug-repo">Repo: Detecting...</p>
+                <p id="debug-path">Path: Detecting...</p>
+                <p id="debug-url" class="mt-2 text-[8px] text-slate-600 break-all"></p>
+            </div>
         </div>
 
-        <!-- Loaders & Errors -->
+        <!-- Loaders -->
         <div id="loader" class="text-center py-24">
             <i class="fas fa-atom fa-spin text-5xl text-blue-600"></i>
-            <p class="text-xs text-slate-500 mt-4 font-bold uppercase tracking-widest">Querying GitHub API...</p>
+            <p class="text-xs text-slate-500 mt-4 font-bold uppercase tracking-[0.3em]">Handshaking with GitHub...</p>
         </div>
 
         <div id="error-message" class="hidden glass p-10 rounded-3xl border-red-500/20 text-center">
-            <div class="bg-red-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2">Synchronization Interrupted</h3>
-            <p id="error-text" class="text-slate-400 mb-6 text-sm"></p>
-            <div class="text-[10px] text-slate-500 bg-slate-900/50 p-6 rounded-2xl inline-block text-left border border-white/5">
-                <p class="font-bold mb-2 text-slate-400">TROUBLESHOOTING:</p>
-                <ul class="list-disc ml-4 space-y-1">
-                    <li>Confirm the repository visibility is <strong>Public</strong>.</li>
-                    <li>Ensure folder structure matches GitHub exactly.</li>
-                    <li>Check your internet connection or API rate limits.</li>
-                </ul>
-            </div>
+            <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-4"></i>
+            <h3 class="text-xl font-bold text-white mb-2">Sync Error</h3>
+            <p id="error-text" class="text-slate-400 text-sm mb-4"></p>
+            <div id="error-debug" class="text-[10px] text-red-400/60 font-mono bg-red-950/20 p-2 rounded inline-block"></div>
         </div>
     </div>
 
     <script>
         const repoOwner = "mrrabeagithub";
-        const repoName = "Grade-12 LS-Physics-Resources";
         let allItems = []; 
-        
+        let currentRepo = "";
+
         function sanitize(str) {
             const div = document.createElement('div');
             div.textContent = str;
@@ -110,84 +107,105 @@
             const titleElement = document.getElementById('folder-name');
             const rootLink = document.getElementById('root-link');
             const crumb = document.getElementById('current-crumb');
+            const badge = document.getElementById('grade-badge');
             const sourceLink = document.getElementById('source-link');
+            const debugRepo = document.getElementById('debug-repo');
+            const debugPath = document.getElementById('debug-path');
+            const debugURL = document.getElementById('debug-url');
 
             grid.innerHTML = '';
             loader.classList.remove('hidden');
             errorContainer.classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
 
+            // 1. REPOSITORY DETECTION (Hardened for Grade 12)
             const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'index.html');
-            const repoIndex = pathSegments.indexOf(repoName);
+            const repoSegment = pathSegments.find(s => s.toLowerCase().startsWith('grade-'));
+            const repoIndex = repoSegment ? pathSegments.indexOf(repoSegment) : -1;
             
-            let segments = [];
             if (repoIndex !== -1) {
-                // Running live on GitHub Pages
-                segments = pathSegments.slice(repoIndex + 1);
+                currentRepo = pathSegments[repoIndex];
             } else {
-                // Running LOCALLY on your laptop. Find the "Chapter-..." folder in your local path
-                const chapIdx = pathSegments.findIndex(s => s.toLowerCase().startsWith('chapter-'));
-                if (chapIdx !== -1) {
-                    segments = pathSegments.slice(chapIdx);
-                } else {
-                    segments = [pathSegments[pathSegments.length - 1] || 'Preview'];
-                }
+                // LOCAL FALLBACK
+                currentRepo = "Grade-12-Physics-Resources"; 
             }
+
+            // 2. RESOLVE SUBPATH (Handling decoding for spaces/ampersands)
+            let segments = repoIndex !== -1 ? pathSegments.slice(repoIndex + 1) : [];
+            
+            // If local and empty segments, try grabbing Chapter prefix
+            if (segments.length === 0 && repoIndex === -1) {
+                const chapIdx = pathSegments.findIndex(s => s.toLowerCase().includes('chapter-'));
+                if (chapIdx !== -1) segments = pathSegments.slice(chapIdx);
+            }
+
+            const decodedSegments = segments.map(s => decodeURIComponent(s));
+            const currentPath = decodedSegments.join('/');
+            
+            // ENCODE PATH FOR SAFE API REQUESTS (Critical for folders with spaces or &)
+            const apiPath = decodedSegments.map(s => encodeURIComponent(s)).join('/');
+            
+            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'Class Portal';
+            const cleanFolderName = rawFolderName.replace(/-/g, ' ');
+
+            // UI UPDATES
+            titleElement.innerText = cleanFolderName;
+            crumb.innerText = cleanFolderName;
+            badge.innerText = currentRepo.replace(/-/g, ' ');
+            sourceLink.href = `https://github.com/${repoOwner}/${currentRepo}`;
+            
+            debugRepo.innerText = `Target Repo: ${currentRepo}`;
+            debugPath.innerText = `Target Path: "${currentPath}"`;
+            debugURL.innerText = window.location.href;
 
             const depth = segments.length;
             rootLink.href = depth > 0 ? "../".repeat(depth) + "index.html" : "index.html";
 
-            const currentPath = segments.join('/');
-            const currentFolderName = segments[segments.length - 1] || 'Physics Library';
-            const cleanFolderName = decodeURIComponent(currentFolderName).replace(/-/g, ' ');
-            titleElement.innerText = cleanFolderName;
-            crumb.innerText = cleanFolderName;
-            
-            // Set dynamic repo link based on configured repoName
-            sourceLink.href = `https://github.com/${repoOwner}/${repoName}`;
-
+            // 3. API FETCH
             const cacheBuster = force ? `&t=${Date.now()}` : '';
-            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${currentPath}?ref=main${cacheBuster}`;
+            const apiUrl = `https://api.github.com/repos/${repoOwner}/${currentRepo}/contents/${apiPath}?ref=main${cacheBuster}`;
 
             try {
                 const response = await fetch(apiUrl);
-                
-                if (response.status === 403) throw new Error("API rate limit exceeded. Please wait a moment.");
-                if (!response.ok) throw new Error(`Path not found on GitHub yet. Upload this folder to your repository to sync.`);
+                if (response.status === 403) throw new Error("API Limit Reached. Wait 60s.");
+                if (!response.ok) throw new Error(`GitHub Directory not found.`);
 
                 allItems = await response.json();
                 loader.classList.add('hidden');
-                renderItems(allItems);
+                
+                if (!Array.isArray(allItems) || allItems.length === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                } else {
+                    renderItems(allItems, currentRepo, currentPath);
+                }
 
             } catch (error) {
-                console.error("Gallery Sync Error:", error);
                 loader.classList.add('hidden');
                 errorText.innerText = error.message;
+                document.getElementById('error-debug').innerText = `API Endpoint: ${apiUrl}`;
                 errorContainer.classList.remove('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
             }
         }
 
-        function renderItems(items) {
+        function renderItems(items, repo, path) {
             const grid = document.getElementById('file-grid');
-            const emptyState = document.getElementById('empty-state');
             grid.innerHTML = '';
 
             const visibleItems = items.filter(item => {
                 const name = item.name.toLowerCase();
-                return !(name === 'index.html' || name === 'readme.md' || name.startsWith('.'));
+                return !(name === 'index.html' || name === 'readme.md' || name.startsWith('.') || name === 'desktop.ini');
             });
 
             if (visibleItems.length === 0) {
-                emptyState.classList.remove('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                // Contextual Empty State
+                document.getElementById('empty-state-title').innerText = "Folder is Ready";
+                document.getElementById('empty-state-desc').innerText = "No physics resources detected here yet. Upload your PDFs, HTML Sims, or Images to GitHub.";
                 return;
-            } else {
-                emptyState.classList.add('hidden');
             }
 
-            visibleItems.sort((a, b) => {
-                if (a.type === b.type) return a.name.localeCompare(b.name);
-                return a.type === 'dir' ? -1 : 1;
-            });
+            visibleItems.sort((a, b) => (a.type === b.type) ? a.name.localeCompare(b.name) : (a.type === 'dir' ? -1 : 1));
 
             visibleItems.forEach(item => {
                 const card = document.createElement('a');
@@ -196,20 +214,9 @@
                 if (item.type === 'dir') {
                     card.href = `./${item.name}/index.html`;
                 } else {
-                    const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'index.html');
-                    const repoIndex = pathSegments.indexOf(repoName);
-                    
-                    let segments = [];
-                    if (repoIndex !== -1) {
-                        segments = pathSegments.slice(repoIndex + 1);
-                    } else {
-                        const chapIdx = pathSegments.findIndex(s => s.toLowerCase().startsWith('chapter-'));
-                        segments = chapIdx !== -1 ? pathSegments.slice(chapIdx) : [pathSegments[pathSegments.length - 1]];
-                    }
-                    
-                    const currentPath = segments.join('/');
-                    const pagesBase = `https://${repoOwner}.github.io/${repoName}/`;
-                    card.href = pagesBase + (currentPath ? currentPath + '/' : '') + item.name;
+                    const pagesBase = `https://${repoOwner}.github.io/${repo}/`;
+                    const fullPath = path ? path + '/' : '';
+                    card.href = pagesBase + fullPath + item.name;
                 }
 
                 card.target = "_blank";
@@ -218,32 +225,23 @@
                 let icon = 'fa-file text-slate-500';
                 let typeLabel = 'Resource';
                 let accentColor = 'group-hover:text-blue-400';
-                const parentFolder = window.location.pathname.toLowerCase();
 
                 if (item.type === 'dir') {
                     icon = 'fa-folder text-amber-500';
-                    typeLabel = 'Sub-Directory';
-                    if (item.name.includes('Summaries')) icon = 'fa-file-invoice text-blue-400';
-                    if (item.name.includes('Guides')) icon = 'fa-scroll text-purple-400';
-                    if (item.name.includes('Worksheets')) icon = 'fa-tasks text-orange-400';
+                    typeLabel = 'Sub-Folder';
+                    const lowerName = item.name.toLowerCase();
+                    if (lowerName.includes('summary')) icon = 'fa-file-invoice text-blue-400';
+                    if (lowerName.includes('sim')) icon = 'fa-atom text-emerald-400';
                 } else if (ext === 'html') {
                     icon = 'fa-play-circle text-emerald-400';
-                    typeLabel = 'Interactive Model';
+                    typeLabel = 'Simulation / App';
                     accentColor = 'group-hover:text-emerald-400';
                 } else if (ext === 'pdf') {
                     icon = 'fa-file-pdf text-rose-400';
-                    typeLabel = 'PDF Document';
-                    if (parentFolder.includes('summaries')) icon = 'fa-file-alt text-blue-400';
-                    if (parentFolder.includes('worksheets')) icon = 'fa-pen-nib text-orange-400';
-                } else if (['png', 'jpg', 'jpeg', 'svg'].includes(ext)) {
-                    icon = 'fa-image text-sky-400';
-                    typeLabel = 'Visual Asset';
-                } else if (['mp4', 'mov', 'avi'].includes(ext)) {
-                    icon = 'fa-video text-rose-500';
-                    typeLabel = 'Video Media';
+                    typeLabel = 'PDF Study File';
                 }
 
-                const cleanName = sanitize(item.name.replace(/-/g, ' '));
+                const cleanName = sanitize(decodeURIComponent(item.name).replace(/-/g, ' '));
 
                 card.innerHTML = `
                     <div>
@@ -256,7 +254,7 @@
                     </div>
                     <div class="mt-5 pt-4 border-t border-white/5 flex justify-between items-center">
                         <span class="text-[9px] text-slate-600 font-medium">${item.type === 'dir' ? 'Folder' : (item.size / 1024).toFixed(1) + ' KB'}</span>
-                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition duration-300 text-blue-400 font-black uppercase tracking-tighter">View Resource</span>
+                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition duration-300 text-blue-400 font-black uppercase tracking-tighter">Open</span>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -266,7 +264,7 @@
         document.getElementById('search-input').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
             const filtered = term === '' ? allItems : allItems.filter(item => item.name.toLowerCase().includes(term));
-            renderItems(filtered);
+            renderItems(filtered, currentRepo, ""); 
         });
 
         window.addEventListener('DOMContentLoaded', () => loadResources());
