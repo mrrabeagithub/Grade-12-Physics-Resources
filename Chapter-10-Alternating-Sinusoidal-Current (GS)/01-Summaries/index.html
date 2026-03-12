@@ -42,7 +42,7 @@
                 </div>
                 <h1 id="folder-name" class="text-4xl md:text-5xl font-black text-white mb-3 italic tracking-tighter">Loading...</h1>
                 <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed">
-                    Interactive resources for <strong>Grade 12 GS Physics</strong>. 
+                    Interactive resources for <strong>Grade 12 LS Physics</strong>. 
                     Synchronized directly with the primary curriculum repository.
                 </p>
             </div>
@@ -81,7 +81,7 @@
 
     <script>
         const repoOwner = "mrrabeagithub";
-        const repoName = "Grade-12 GS-Physics-Resources";
+        const repoName = "Grade-12-Physics-Resources";
         let allItems = []; 
         
         function sanitize(str) {
@@ -130,7 +130,7 @@
             // Fix for URL Encoding (%20, &) and hyphen formatting
             const decodedSegments = segments.map(s => decodeURIComponent(s));
             const currentPath = decodedSegments.join('/');
-            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'Grade 12 GS Physics Portal';
+            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'Grade 12 Physics Portal';
             const cleanFolderName = rawFolderName.replace(/-/g, ' ');
             
             titleElement.innerText = cleanFolderName;
@@ -257,5 +257,4 @@
         window.addEventListener('DOMContentLoaded', () => loadResources());
     </script>
 </body>
-
 </html>
