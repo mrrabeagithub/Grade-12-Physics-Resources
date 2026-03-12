@@ -42,7 +42,7 @@
                 </div>
                 <h1 id="folder-name" class="text-4xl md:text-5xl font-black text-white mb-3 italic tracking-tighter">Loading...</h1>
                 <p id="folder-desc" class="text-slate-400 max-w-xl text-sm leading-relaxed">
-                    Interactive resources for <strong>Grade 12 GS Physics</strong>. 
+                    Interactive resources for <strong>Grade 12 LS Physics</strong>. 
                     Synchronized directly with the primary curriculum repository.
                 </p>
             </div>
@@ -50,7 +50,7 @@
                 <button onclick="loadResources(true)" class="p-3 glass rounded-xl hover:bg-white/10 transition group" title="Force Refresh">
                     <i class="fas fa-sync-alt text-slate-400 group-active:rotate-180 transition-transform duration-500"></i>
                 </button>
-                <a href="https://github.com/mrrabeagithub/Grade-12 GS-Physics-Resources" target="_blank" id="source-link" class="glass px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center border-white/5">
+                <a href="https://github.com/mrrabeagithub/Grade-12-Physics-Resources" target="_blank" id="source-link" class="glass px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center border-white/5">
                     <i class="fab fa-github mr-2 text-base"></i> Repo
                 </a>
             </div>
@@ -81,7 +81,7 @@
 
     <script>
         const repoOwner = "mrrabeagithub";
-        const repoName = "Grade-12 GS-Physics-Resources";
+        const repoName = "Grade-12-LS-Physics-Resources";
         let allItems = []; 
         
         function sanitize(str) {
@@ -130,7 +130,7 @@
             // Fix for URL Encoding (%20, &) and hyphen formatting
             const decodedSegments = segments.map(s => decodeURIComponent(s));
             const currentPath = decodedSegments.join('/');
-            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'Grade 12 GS Physics Portal';
+            const rawFolderName = decodedSegments[decodedSegments.length - 1] || 'Grade 12 LS Physics Portal';
             const cleanFolderName = rawFolderName.replace(/-/g, ' ');
             
             titleElement.innerText = cleanFolderName;
@@ -258,3 +258,5 @@
     </script>
 </body>
 </html>
+
+
