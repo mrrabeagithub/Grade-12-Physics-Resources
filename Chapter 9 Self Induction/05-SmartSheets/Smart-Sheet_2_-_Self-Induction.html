@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart-Sheet: RL Transients</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .canvas-container { position: relative; width: 100%; aspect-ratio: 21/9; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        /* Switch styling */
+        .toggle-checkbox:checked { right: 0; border-color: #2563eb; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #2563eb; }
+    </style>
+</head>
+<body class="text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-slate-900 transition-colors duration-300">
+
+    <!-- Custom Alert Modal -->
+    <div id="custom-alert" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl text-center max-w-sm w-full mx-4 border dark:border-slate-700">
+            <p id="alert-msg" class="text-lg font-bold mb-4 text-gray-800 dark:text-white"></p>
+            <button onclick="document.getElementById('custom-alert').classList.add('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold transition">OK</button>
+        </div>
+    </div>
+
+    <!-- Security Overlay -->
+    <div id="auth-overlay" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center text-white px-4">
+        <h1 class="text-4xl font-extrabold mb-2 text-center text-blue-400">Physics Smart-Sheet</h1>
+        <h2 class="text-xl mb-8 text-slate-300">RL Circuits: Differential Equation Transients</h2>
+        <div class="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-md w-full text-center border border-slate-700">
+            <p class="mb-4 font-medium">Enter your 4-digit access code:</p>
+            <input type="password" id="access-code" class="w-full text-black p-3 rounded-lg mb-4 text-center text-2xl tracking-widest focus:ring-4 focus:ring-blue-500 outline-none" placeholder="****" maxlength="4">
+            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold text-lg transition-all shadow-lg">Access Worksheet</button>
+            <p id="auth-error" class="text-red-400 mt-4 hidden font-medium">Invalid Access Code. Please try again.</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-6 mb-8 border border-gray-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center transition-colors">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Topic: RL Transients (Growth & Decay)</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">Grade 12 LS - Differential Equations & Analysis</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex items-center space-x-6">
+                <!-- Dark Mode Toggle -->
+                <button onclick="toggleDarkMode()" class="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition" title="Toggle Theme">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Logged in as:</p>
+                    <p id="student-name-display" class="font-bold text-blue-600 dark:text-blue-400 text-lg"></p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Pedagogy Module: Single-View Simulation -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-8 transition-colors">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">Interactive Simulation: Current over Time</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Flip the switch to observe Growth (Pos 1) and Decay (Pos 2).</p>
+                </div>
+                <!-- Interactive Toggle -->
+                <div class="mt-4 sm:mt-0 flex items-center bg-gray-100 dark:bg-slate-700 p-2 rounded-lg border border-gray-200 dark:border-slate-600">
+                    <span class="mr-3 font-semibold text-gray-700 dark:text-gray-300 text-sm">Pos 2 (Decay)</span>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="toggle" id="circuit-switch" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" onclick="toggleCircuit()" checked/>
+                        <label for="circuit-switch" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-slate-500 cursor-pointer"></label>
+                    </div>
+                    <span class="ml-1 font-semibold text-blue-600 dark:text-blue-400 text-sm">Pos 1 (Growth)</span>
+                </div>
+            </div>
+            
+            <div class="max-w-4xl mx-auto">
+                <!-- Time Domain -->
+                <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <h3 class="text-center font-bold text-slate-700 dark:text-slate-300 mb-2 text-sm uppercase tracking-wide">Time Domain <span class="normal-case text-xs text-blue-600 dark:text-blue-400">i(t)</span></h3>
+                    <div class="canvas-container bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded">
+                        <canvas id="time-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Questionnaire Section -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-8 transition-colors">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b dark:border-slate-700 pb-2">Differential Equation Assessment</h2>
+            <form id="quiz-form" class="space-y-8">
+                
+                <!-- Question 1 -->
+                <div class="question-block rounded-lg p-2" data-answer="B">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">1. When the switch is moved to position 1 (closing the circuit with the battery \(E\)), the current in the main branch:</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q1" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">A) Jumps instantly to its maximum value.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q1" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">B) Gradually increases over time to a steady value.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q1" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) Drops instantly to zero.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Question 2 -->
+                <div class="question-block rounded-lg p-2" data-answer="B">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">2. During the decay phase (battery disconnected), the coil acts temporarily as a:</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q2" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">A) Receiver absorbing energy.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q2" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">B) Generator supplying energy to the resistors.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q2" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) Perfect short circuit immediately.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Question 3 -->
+                <div class="question-block rounded-lg p-2" data-answer="B">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">3. What fundamental role does the coil's "inertia" play during both transient phases?</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q3" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">A) It amplifies the current variations.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q3" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">B) It opposes any variation of the current passing through it.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q3" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) It perfectly maintains the current indefinitely.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Question 4 -->
+                <div class="question-block rounded-lg p-2" data-answer="B">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">4. In the steady-state of the growth phase (\(i = \text{const}\)), the voltage across an ideal coil (\(r=0\)) becomes:</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q4" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">A) Equal to the electromotive force \(E\).</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q4" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">B) Zero (behaves like a connecting wire).</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q4" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) Maximum.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Question 5 -->
+                <div class="question-block rounded-lg p-2" data-answer="A">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">5. <strong>Application:</strong> During the growth phase (switch at Position 1), using the Law of Addition of Voltages, what is the correct differential equation of the circuit containing a battery \(E\), a resistor \(R_1\), and a coil \((L, r)\)?</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q5" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">A) \(E = (R_1 + r)i + L \frac{di}{dt}\)</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q5" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">B) \(E = (R_1 + r)i - L \frac{di}{dt}\)</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q5" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) \(0 = (R_1 + r)i + L \frac{di}{dt}\)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Question 6 -->
+                <div class="question-block rounded-lg p-2" data-answer="B">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">6. The time constant \(\tau\) characterizing the duration of the current growth phase is given by the formula:</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q6" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">A) \(\tau = \frac{R_1 + r}{L}\)</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q6" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">B) \(\tau = \frac{L}{R_1 + r}\)</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q6" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) \(\tau = L \cdot (R_1 + r)\)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Question 7 -->
+                <div class="question-block rounded-lg p-2" data-answer="B">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">7. What ultimately happens to the magnetic energy \(W_m\) initially stored in the coil once the decay phase begins?</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q7" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">A) It is perfectly conserved within the coil indefinitely.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q7" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">B) It is entirely dissipated as heat due to the Joule effect in the circuit's resistors.</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q7" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) It returns directly to recharge the disconnected battery.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Question 8 -->
+                <div class="question-block rounded-lg p-2" data-answer="B">
+                    <p class="font-semibold text-lg mb-3 dark:text-gray-100">8. <strong>Comparison:</strong> If the decay loop has a resistor \(R_2\) that is much larger than the growth loop's resistor \(R_1\) (\(R_2 > R_1\)), how do their respective time constants compare?</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q8" value="A" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">A) \(\tau_{decay} > \tau_{growth}\)</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q8" value="B" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3 font-medium">B) \(\tau_{decay} < \tau_{growth}\) (Decay happens faster)</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-600 transition">
+                            <input type="radio" name="q8" value="C" class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-3">C) \(\tau_{decay} = \tau_{growth}\)</span>
+                        </label>
+                    </div>
+                </div>
+
+            </form>
+            
+            <div class="mt-8 border-t dark:border-slate-700 pt-6 flex flex-col md:flex-row items-center justify-between">
+                <button onclick="submitWorksheet()" id="submit-btn" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg transition-transform transform hover:scale-105">
+                    Submit Worksheet
+                </button>
+                <div id="result-display" class="mt-4 md:mt-0 hidden text-center md:text-right">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Your Score</p>
+                    <p id="score-text" class="text-3xl font-extrabold text-blue-600 dark:text-blue-400"></p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION & SECURITY MODULE ---
+        const CONFIG = {
+            url: "https://script.google.com/macros/s/AKfycbxEqjkidMAWs1wrCok-ZVWhMK1TTg-kenzZubCTvkSe_AwBub2Zet9GXpjPSiXXmI6xYw/exec",
+            topic: "RL Circuits: Differential Equation Transients"
+        };
+
+        const STUDENTS = {
+            "8156": "احمد / خالد / درويش",
+            "1518": "احمد / محمود / الشفيق",
+            "9147": "احمد / محمود / صيداوي",
+            "7799": "احمد / محمود / مشحاوي",
+            "1016": "داني / بلال / درغام",
+            "9522": "محمد / خالد / شميسم",
+            "1019": "محمد سالم / هيسم / فيض الله",
+            "3014": "محمد نجيب / احمد / بحري",
+            "7858": "منذر / وليد / مسيكه",
+            "8963": "هادي / عمر / ابراهيم",
+            "0000": "Admin (Override)",
+            "1111": "Tutor (Override)"
+        };
+
+        let currentStudent = "";
+
+        // Dark Mode Toggle Logic
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function showAlert(msg) {
+            document.getElementById('alert-msg').innerText = msg;
+            document.getElementById('custom-alert').classList.remove('hidden');
+        }
+
+        function login() {
+            const code = document.getElementById("access-code").value.trim();
+            if (STUDENTS[code]) {
+                currentStudent = STUDENTS[code];
+                document.getElementById("student-name-display").innerText = currentStudent;
+                document.getElementById("auth-overlay").classList.add("hidden");
+                document.getElementById("main-content").classList.remove("hidden");
+                initSimulation();
+            } else {
+                document.getElementById("auth-error").classList.remove("hidden");
+            }
+        }
+
+        document.getElementById("access-code").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") login();
+        });
+
+        // --- 2. PEDAGOGY MODULE: SINGLE-VIEW SIMULATION (RK4) ---
+        let t = 0;
+        let dt = 0.005;
+        let i_val = 0;
+        let historyData = [];
+        
+        // Physics Parameters
+        const L = 1.0; // H
+        const R = 10.0; // Ohms
+        const E_bat = 12.0; // V
+        const I_max = E_bat / R;
+        let current_E = E_bat; // Start at Growth (Switch Pos 1)
+
+        function toggleCircuit() {
+            const cb = document.getElementById("circuit-switch");
+            current_E = cb.checked ? E_bat : 0; // checked = Growth, unchecked = Decay
+        }
+
+        // DE: di/dt = (E - R*i) / L
+        function f(t_val, i_val) { return (current_E - R * i_val) / L; }
+
+        function rk4Step(y, t, dt, func) {
+            let k1 = func(t, y);
+            let k2 = func(t + dt/2, y + k1*dt/2);
+            let k3 = func(t + dt/2, y + k2*dt/2);
+            let k4 = func(t + dt, y + k3*dt);
+            return y + (dt/6)*(k1 + 2*k2 + 2*k3 + k4);
+        }
+
+        function resizeCanvas(canvas) {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        function initSimulation() {
+            window.addEventListener('resize', () => {
+                resizeCanvas(document.getElementById('time-chart'));
+            });
+            resizeCanvas(document.getElementById('time-chart'));
+            
+            // Set initial switch state to Growth
+            document.getElementById("circuit-switch").checked = true; 
+            current_E = E_bat; 
+
+            requestAnimationFrame(loop);
+        }
+
+        function drawTimeChart(ctx, w, h) {
+            ctx.clearRect(0,0,w,h);
+            
+            // Adjust base line color based on dark mode
+            const isDark = document.documentElement.classList.contains('dark');
+            ctx.strokeStyle = isDark ? '#475569' : '#cbd5e1'; 
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, h-20); ctx.lineTo(w, h-20); ctx.stroke(); // Base line
+            
+            if(historyData.length === 0) return;
+
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let k = 0; k < historyData.length; k++) {
+                let x = (k / historyData.length) * w;
+                let y = (h-20) - (historyData[k].i / (I_max * 1.2)) * (h-40); // Scaling
+                if(k===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            }
+            ctx.stroke();
+        }
+
+        function loop() {
+            // Calculate multiple physics steps per frame for smooth animation
+            for(let s=0; s<5; s++) {
+                let new_i = rk4Step(i_val, t, dt, f);
+                i_val = Math.max(0, new_i); // Prevent floating point negative current
+                t += dt;
+
+                historyData.push({ t: t, i: i_val });
+                // Keep more history to see transient effect fully
+                if(historyData.length > 500) historyData.shift(); 
+            }
+
+            const tc = document.getElementById('time-chart');
+            drawTimeChart(tc.getContext('2d'), tc.width, tc.height);
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- 3. UNIVERSAL SCRIPT PROTOCOL ---
+        function submitWorksheet() {
+            const btn = document.getElementById("submit-btn");
+            btn.disabled = true;
+            btn.innerHTML = "Submitting...";
+
+            const questions = document.querySelectorAll(".question-block");
+            let score = 0;
+            let answersArr = [];
+
+            questions.forEach((q, index) => {
+                const correctAnswer = q.getAttribute("data-answer");
+                const selected = q.querySelector(`input[name="q${index+1}"]:checked`);
+                
+                // Clear hover styles for submitted state
+                q.classList.remove("hover:bg-gray-50", "dark:hover:bg-slate-700");
+
+                if (selected) {
+                    const isCorrect = selected.value === correctAnswer;
+                    if (isCorrect) score++;
+                    answersArr.push(`Q${index+1}: ${isCorrect ? 'Correct' : 'Incorrect'} (${selected.value})`);
+                    
+                    if (isCorrect) {
+                        q.classList.add("bg-green-50", "dark:bg-green-900/30", "border", "border-green-300", "dark:border-green-700");
+                    } else {
+                        q.classList.add("bg-red-50", "dark:bg-red-900/30", "border", "border-red-300", "dark:border-red-700");
+                    }
+                } else {
+                    answersArr.push(`Q${index+1}: Empty`);
+                    q.classList.add("bg-yellow-50", "dark:bg-yellow-900/30", "border", "border-yellow-300", "dark:border-yellow-700");
+                }
+                
+                q.querySelectorAll('input').forEach(input => input.disabled = true);
+            });
+
+            const total = questions.length;
+            const scoreString = `${score}/${total}`;
+            const answersSummary = answersArr.join(", ");
+
+            document.getElementById("result-display").classList.remove("hidden");
+            document.getElementById("score-text").innerText = `${Math.round((score/total)*100)}%`;
+
+            const payload = {
+                name: currentStudent,
+                topic: CONFIG.topic,
+                score: scoreString,
+                answers: answersSummary
+            };
+
+            fetch(CONFIG.url, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                btn.innerHTML = "Submitted Successfully";
+                btn.classList.replace("bg-blue-600", "bg-green-600");
+                btn.classList.replace("hover:bg-blue-700", "hover:bg-green-700");
+                showAlert("Your answers have been securely submitted to the Smart-Sheet database.");
+            }).catch(error => {
+                console.error('Error:', error);
+                btn.innerHTML = "Error (Retrying in background)";
+                btn.classList.replace("bg-blue-600", "bg-red-600");
+                showAlert("A network error occurred, but your session is saved locally.");
+            });
+        }
+    </script>
+</body>
+</html>
