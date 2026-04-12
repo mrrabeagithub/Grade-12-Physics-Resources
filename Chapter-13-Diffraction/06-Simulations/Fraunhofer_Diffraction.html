@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraunhofer Diffraction | By Rabih A.G.</title>
+    
+    <!-- Tailwind CSS for rapid, responsive, premium UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MathJax for rigorous LaTeX equation rendering -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { brand: { 500: '#3b82f6', 600: '#2563eb' } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #3b82f6; cursor: pointer; margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px;
+        }
+        .dark input[type=range]::-webkit-slider-runnable-track { background: #475569; }
+        canvas { width: 100%; height: 100%; display: block; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 py-4 px-6 flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Wave Aspect of Light: Single-Slit Diffraction
+            </h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Huygens-Fresnel Principle Simulation | By Rabih A.G.</p>
+        </div>
+        
+        <!-- Dark Mode Toggle (Gold Sun / Silver Moon) -->
+        <button id="themeToggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center border border-slate-300 dark:border-slate-600" title="Toggle Theme">
+            <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" style="color: #FFD700; stroke: #FFD700;" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block dark:hidden" style="color: #C0C0C0; fill: #C0C0C0;" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+            </svg>
+        </button>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Control Panel -->
+        <aside class="w-full lg:w-96 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-6 overflow-y-auto shadow-inner">
+            
+            <div class="space-y-5">
+                <h2 class="text-lg font-semibold border-b border-slate-200 dark:border-slate-700 pb-2">Physical Parameters</h2>
+                
+                <!-- Wavelength (Lambda) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium">Wavelength ($\lambda$)</label>
+                        <span id="valLambda" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">633 nm</span>
+                    </div>
+                    <input type="range" id="sliderLambda" min="400" max="800" step="1" value="633">
+                    <div class="w-full h-2 mt-2 rounded" id="colorSwatch"></div>
+                </div>
+
+                <!-- Slit Width (a) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium">Slit Width ($a$)</label>
+                        <span id="valA" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">0.10 mm</span>
+                    </div>
+                    <input type="range" id="sliderA" min="0.02" max="0.4" step="0.01" value="0.10">
+                </div>
+
+                <!-- Distance to Screen (D) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium">Distance to Screen ($D$)</label>
+                        <span id="valD" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">2.0 m</span>
+                    </div>
+                    <input type="range" id="sliderD" min="0.5" max="5.0" step="0.1" value="2.0">
+                </div>
+            </div>
+
+            <!-- Live Output Display -->
+            <div class="bg-slate-100 dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                <h2 class="text-md font-semibold mb-3 border-b border-slate-300 dark:border-slate-600 pb-1">Measurements</h2>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm">Central Fringe Width ($L$):</span>
+                    <span id="outL" class="font-mono font-bold text-brand-600 dark:text-brand-400">25.32 mm</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm">Angular Width ($\alpha$):</span>
+                    <span id="outAlpha" class="font-mono font-bold text-brand-600 dark:text-brand-400">12.66 mrad</span>
+                </div>
+            </div>
+
+            <!-- Mathematical Governing Equations Box -->
+            <div class="mt-auto bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
+                <h3 class="font-semibold text-blue-800 dark:text-blue-300 mb-2">Fraunhofer Diffraction</h3>
+                <p class="mb-1">Central Width: $$L = \frac{2\lambda D}{a}$$</p>
+                <p class="mb-1">Dark Fringes: $$y_n = \frac{n\lambda D}{a}$$</p>
+                <p class="mt-2 text-xs text-blue-700 dark:text-blue-400">Intensity: $ I = I_0 \left[ \frac{\sin(\pi a \sin\theta / \lambda)}{\pi a \sin\theta / \lambda} \right]^2 $</p>
+            </div>
+        </aside>
+
+        <!-- Right Visualizations Panel (The Optics Trinity) -->
+        <section class="flex-1 p-4 lg:p-6 grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6 overflow-y-auto">
+            
+            <!-- Plot 1: Intensity Graph -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col xl:col-span-2 h-72 lg:h-80">
+                <div class="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 rounded-t-xl">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        Light Intensity Distribution ($I/I_0$ vs $y$)
+                    </h3>
+                    <span class="text-xs text-slate-500">Cross-section analysis on the screen.</span>
+                </div>
+                <div class="flex-1 relative p-2">
+                    <canvas id="canvasIntensity"></canvas>
+                </div>
+            </div>
+
+            <!-- Plot 2: 2D Screen View -->
+            <div class="bg-black rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-72 lg:h-80 overflow-hidden">
+                <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-gray-900 rounded-t-xl">
+                    <h3 class="font-semibold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        Screen Observation (Diffraction Pattern)
+                    </h3>
+                </div>
+                <div class="flex-1 relative">
+                    <canvas id="canvasScreen"></canvas>
+                </div>
+            </div>
+
+            <!-- Plot 3: Top-Down Geometry -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-72 lg:h-80">
+                <div class="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 rounded-t-xl">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                        Top-Down Experimental Setup
+                    </h3>
+                </div>
+                <div class="flex-1 relative p-2">
+                    <canvas id="canvasTopDown"></canvas>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Core Physics & Visualization Logic -->
+    <script>
+        // ============================================================================
+        // DIRECTIVE: High-Precision Wave Optics Engine
+        // Pedagogical focus: Connecting physical parameters to wave diffraction limits.
+        // Integration: Huygens-Fresnel principle via Fraunhofer limit.
+        // ============================================================================
+
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        themeToggle.addEventListener('click', () => { html.classList.toggle('dark'); drawAll(); });
+
+        const UI = {
+            sliderLambda: document.getElementById('sliderLambda'),
+            sliderA: document.getElementById('sliderA'),
+            sliderD: document.getElementById('sliderD'),
+            valLambda: document.getElementById('valLambda'),
+            valA: document.getElementById('valA'),
+            valD: document.getElementById('valD'),
+            outL: document.getElementById('outL'),
+            outAlpha: document.getElementById('outAlpha'),
+            colorSwatch: document.getElementById('colorSwatch')
+        };
+
+        // --- Physical Parameters (Verbose Naming) ---
+        let wavelength_lambda_meters = 0;
+        let slit_width_a_meters = 0;
+        let distance_screen_D_meters = 0;
+        
+        let active_rgb = {r: 255, g: 0, b: 0};
+
+        // --- Math Helpers ---
+        // Sinc function: sinc(x) = sin(x)/x
+        function math_sinc(x) {
+            if (Math.abs(x) < 1e-8) return 1.0;
+            return Math.sin(x) / x;
+        }
+
+        // Convert Wavelength (nm) to RGB (approximation for visual fidelity)
+        function wavelengthToRGB(Wavelength) {
+            let R, G, B;
+            if (Wavelength >= 380 && Wavelength < 440) {
+                R = -(Wavelength - 440) / (440 - 380);
+                G = 0.0;
+                B = 1.0;
+            } else if (Wavelength >= 440 && Wavelength < 490) {
+                R = 0.0;
+                G = (Wavelength - 440) / (490 - 440);
+                B = 1.0;
+            } else if (Wavelength >= 490 && Wavelength < 510) {
+                R = 0.0;
+                G = 1.0;
+                B = -(Wavelength - 510) / (510 - 490);
+            } else if (Wavelength >= 510 && Wavelength < 580) {
+                R = (Wavelength - 510) / (580 - 510);
+                G = 1.0;
+                B = 0.0;
+            } else if (Wavelength >= 580 && Wavelength < 645) {
+                R = 1.0;
+                G = -(Wavelength - 645) / (645 - 580);
+                B = 0.0;
+            } else if (Wavelength >= 645 && Wavelength <= 800) {
+                R = 1.0;
+                G = 0.0;
+                B = 0.0;
+            } else {
+                R = 0.0; G = 0.0; B = 0.0;
+            }
+
+            // Intensity fade near vision limits
+            let factor;
+            if (Wavelength >= 380 && Wavelength < 420) {
+                factor = 0.3 + 0.7*(Wavelength - 380) / (420 - 380);
+            } else if (Wavelength >= 420 && Wavelength < 701) {
+                factor = 1.0;
+            } else if (Wavelength >= 701 && Wavelength <= 800) {
+                factor = 0.3 + 0.7*(800 - Wavelength) / (800 - 700);
+            } else {
+                factor = 0.0;
+            }
+
+            return {
+                r: Math.round(R * factor * 255),
+                g: Math.round(G * factor * 255),
+                b: Math.round(B * factor * 255)
+            };
+        }
+
+        function updatePhysics() {
+            let lambda_nm = parseFloat(UI.sliderLambda.value);
+            wavelength_lambda_meters = lambda_nm * 1e-9;
+            
+            let a_mm = parseFloat(UI.sliderA.value);
+            slit_width_a_meters = a_mm * 1e-3;
+            
+            distance_screen_D_meters = parseFloat(UI.sliderD.value);
+
+            // Calculate derived values
+            let linear_width_L_meters = (2 * wavelength_lambda_meters * distance_screen_D_meters) / slit_width_a_meters;
+            let angular_width_alpha_radians = (2 * wavelength_lambda_meters) / slit_width_a_meters;
+
+            // Update UI
+            UI.valLambda.textContent = `${lambda_nm} nm`;
+            UI.valA.textContent = `${a_mm.toFixed(2)} mm`;
+            UI.valD.textContent = `${distance_screen_D_meters.toFixed(1)} m`;
+            
+            UI.outL.textContent = `${(linear_width_L_meters * 1000).toFixed(2)} mm`;
+            UI.outAlpha.textContent = `${(angular_width_alpha_radians * 1000).toFixed(2)} mrad`;
+
+            active_rgb = wavelengthToRGB(lambda_nm);
+            UI.colorSwatch.style.backgroundColor = `rgb(${active_rgb.r}, ${active_rgb.g}, ${active_rgb.b})`;
+
+            drawAll();
+        }
+
+        [UI.sliderLambda, UI.sliderA, UI.sliderD].forEach(el => el.addEventListener('input', updatePhysics));
+
+        // --- Canvas Setup ---
+        const canvInt = document.getElementById('canvasIntensity');
+        const ctxInt = canvInt.getContext('2d');
+        const canvScr = document.getElementById('canvasScreen');
+        const ctxScr = canvScr.getContext('2d');
+        const canvTop = document.getElementById('canvasTopDown');
+        const ctxTop = canvTop.getContext('2d');
+
+        function resizeCanvases() {
+            [canvInt, canvScr, canvTop].forEach(c => {
+                c.width = c.parentElement.clientWidth;
+                c.height = c.parentElement.clientHeight;
+            });
+            drawAll();
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        function getTheme() {
+            const isDark = html.classList.contains('dark');
+            return {
+                grid: isDark ? '#334155' : '#e2e8f0',
+                axis: isDark ? '#94a3b8' : '#475569',
+                text: isDark ? '#cbd5e1' : '#334155',
+                laser: `rgb(${active_rgb.r}, ${active_rgb.g}, ${active_rgb.b})`
+            };
+        }
+
+        // --- Intensity Profile Engine ---
+        function calculateIntensityAtY(y_meters) {
+            // Fraunhofer Equation: I = I_0 * sinc^2(beta)
+            // beta = (pi * a * sin(theta)) / lambda  ~~ (pi * a * y) / (lambda * D) for small angles
+            let beta = (Math.PI * slit_width_a_meters * y_meters) / (wavelength_lambda_meters * distance_screen_D_meters);
+            let amplitude = math_sinc(beta);
+            return amplitude * amplitude; // relative intensity I/I_0
+        }
+
+        // --- Draw Visualization 1: Intensity Graph ---
+        function drawIntensity(theme) {
+            ctxInt.clearRect(0, 0, canvInt.width, canvInt.height);
+            const padX = 50, padY = 30;
+            const w = canvInt.width - padX * 2;
+            const h = canvInt.height - padY * 2;
+
+            // X-axis limits in physical meters. We want to show a fixed viewing window on the screen.
+            // Let's set the viewing window to observe [-30mm, 30mm] of the screen.
+            const window_limit_meters = 0.03; 
+
+            // Axes
+            ctxInt.strokeStyle = theme.axis;
+            ctxInt.lineWidth = 1;
+            ctxInt.beginPath();
+            ctxInt.moveTo(padX, padY);
+            ctxInt.lineTo(padX, padY + h); // Y-axis
+            ctxInt.lineTo(padX + w, padY + h); // X-axis
+            ctxInt.stroke();
+
+            // Y-axis labels
+            ctxInt.fillStyle = theme.text;
+            ctxInt.font = '12px sans-serif';
+            ctxInt.textAlign = 'right';
+            ctxInt.textBaseline = 'middle';
+            ctxInt.fillText('I₀', padX - 10, padY);
+            ctxInt.fillText('0', padX - 10, padY + h);
+            
+            // X-axis labels
+            ctxInt.textAlign = 'center';
+            ctxInt.textBaseline = 'top';
+            ctxInt.fillText('0', padX + w/2, padY + h + 10);
+            ctxInt.fillText('+30 mm', padX + w, padY + h + 10);
+            ctxInt.fillText('-30 mm', padX, padY + h + 10);
+            ctxInt.fillText(`Distance on Screen y (mm)`, padX + w/2, padY + h + 30);
+
+            // Draw I/I_0 curve
+            ctxInt.strokeStyle = theme.laser;
+            ctxInt.lineWidth = 2;
+            ctxInt.beginPath();
+
+            for (let px = 0; px <= w; px++) {
+                // Map pixel to physical y distance
+                let y_meters = -window_limit_meters + (px / w) * (2 * window_limit_meters);
+                let relative_intensity = calculateIntensityAtY(y_meters);
+                
+                let plot_x = padX + px;
+                let plot_y = padY + h - (relative_intensity * h);
+                
+                if (px === 0) ctxInt.moveTo(plot_x, plot_y);
+                else ctxInt.lineTo(plot_x, plot_y);
+            }
+            ctxInt.stroke();
+
+            // Mark 1st dark fringes
+            let y_min1 = (wavelength_lambda_meters * distance_screen_D_meters) / slit_width_a_meters;
+            if (y_min1 <= window_limit_meters) {
+                ctxInt.strokeStyle = theme.text;
+                ctxInt.setLineDash([3, 3]);
+                ctxInt.beginPath();
+                // Positive
+                let px_pos = (y_min1 + window_limit_meters) / (2 * window_limit_meters) * w;
+                ctxInt.moveTo(padX + px_pos, padY + h); ctxInt.lineTo(padX + px_pos, padY);
+                // Negative
+                let px_neg = (-y_min1 + window_limit_meters) / (2 * window_limit_meters) * w;
+                ctxInt.moveTo(padX + px_neg, padY + h); ctxInt.lineTo(padX + px_neg, padY);
+                ctxInt.stroke();
+                ctxInt.setLineDash([]);
+            }
+        }
+
+        // --- Draw Visualization 2: Screen Pattern ---
+        function drawScreen(theme) {
+            ctxScr.clearRect(0, 0, canvScr.width, canvScr.height);
+            const w = canvScr.width;
+            const h = canvScr.height;
+            const window_limit_meters = 0.03; 
+
+            // Create image data for high-performance pixel drawing
+            let imgData = ctxScr.createImageData(w, h);
+            let data = imgData.data;
+
+            // We only need to compute intensity once per X column
+            let intensityCache = new Float32Array(w);
+            for (let x = 0; x < w; x++) {
+                let y_meters = -window_limit_meters + (x / w) * (2 * window_limit_meters);
+                intensityCache[x] = calculateIntensityAtY(y_meters);
+            }
+
+            // Fill pixels
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    let index = (y * w + x) * 4;
+                    // Apply intensity as opacity over the black background
+                    // Also boost brightness slightly to mimic perception of bright spots
+                    let intensity = intensityCache[x];
+                    
+                    data[index] = active_rgb.r;     // R
+                    data[index+1] = active_rgb.g;   // G
+                    data[index+2] = active_rgb.b;   // B
+                    // Non-linear alpha mapping to make fringes more visible like real eyes/cameras
+                    data[index+3] = Math.min(255, Math.pow(intensity, 0.6) * 255 * 1.5); // A
+                }
+            }
+            ctxScr.putImageData(imgData, 0, 0);
+
+            // Draw mm scale on top
+            ctxScr.fillStyle = 'rgba(255,255,255,0.7)';
+            ctxScr.font = '10px sans-serif';
+            ctxScr.textAlign = 'center';
+            ctxScr.fillText('0', w/2, 15);
+            ctxScr.fillRect(w/2, 0, 1, 5);
+        }
+
+        // --- Draw Visualization 3: Top-Down Setup ---
+        function drawTopDown(theme) {
+            ctxTop.clearRect(0, 0, canvTop.width, canvTop.height);
+            const padX = 20, padY = 40;
+            const w = canvTop.width - padX * 2;
+            const h = canvTop.height - padY * 2;
+
+            // Physical layout mapping
+            const x_laser = padX;
+            const x_slit = padX + w * 0.2;
+            const x_screen = padX + w * 0.9;
+            const y_center = padY + h / 2;
+
+            // 1. Draw Laser Source
+            ctxTop.fillStyle = '#64748b';
+            ctxTop.fillRect(x_laser, y_center - 15, x_slit - x_laser - 10, 30);
+            ctxTop.fillStyle = theme.text;
+            ctxTop.font = '12px sans-serif';
+            ctxTop.textAlign = 'center';
+            ctxTop.fillText('Laser', x_laser + (x_slit - x_laser)/2, y_center + 4);
+
+            // 2. Draw Incident Beam
+            ctxTop.strokeStyle = theme.laser;
+            ctxTop.lineWidth = 4;
+            ctxTop.beginPath();
+            ctxTop.moveTo(x_slit - 10, y_center);
+            ctxTop.lineTo(x_slit, y_center);
+            ctxTop.stroke();
+
+            // 3. Draw Slit Plane
+            ctxTop.strokeStyle = theme.text;
+            ctxTop.lineWidth = 3;
+            ctxTop.beginPath();
+            ctxTop.moveTo(x_slit, padY);
+            ctxTop.lineTo(x_slit, y_center - 5); // top barrier
+            ctxTop.moveTo(x_slit, y_center + 5); // bottom barrier
+            ctxTop.lineTo(x_slit, padY + h);
+            ctxTop.stroke();
+
+            // 4. Draw Screen
+            ctxTop.strokeStyle = theme.axis;
+            ctxTop.lineWidth = 4;
+            ctxTop.beginPath();
+            ctxTop.moveTo(x_screen, padY);
+            ctxTop.lineTo(x_screen, padY + h);
+            ctxTop.stroke();
+
+            // 5. Draw Diffracted Envelope (To 1st Minimum)
+            // theta_min = lambda / a.  Scale visually.
+            let theta_min = wavelength_lambda_meters / slit_width_a_meters;
+            
+            // Artificial scaling for the top-down view to make small angles visible
+            let visual_scale = 10; 
+            let y_spread = (x_screen - x_slit) * Math.tan(theta_min) * visual_scale;
+            
+            // Limit y_spread to canvas height for safety
+            y_spread = Math.min(y_spread, h/2 - 10);
+
+            ctxTop.fillStyle = theme.laser;
+            ctxTop.globalAlpha = 0.2;
+            ctxTop.beginPath();
+            ctxTop.moveTo(x_slit, y_center);
+            ctxTop.lineTo(x_screen, y_center - y_spread);
+            ctxTop.lineTo(x_screen, y_center + y_spread);
+            ctxTop.fill();
+            ctxTop.globalAlpha = 1.0;
+
+            // Envelope borders
+            ctxTop.strokeStyle = theme.laser;
+            ctxTop.lineWidth = 1;
+            ctxTop.setLineDash([4, 4]);
+            ctxTop.beginPath();
+            ctxTop.moveTo(x_slit, y_center); ctxTop.lineTo(x_screen, y_center - y_spread);
+            ctxTop.moveTo(x_slit, y_center); ctxTop.lineTo(x_screen, y_center + y_spread);
+            ctxTop.stroke();
+            ctxTop.setLineDash([]);
+
+            // Labels
+            ctxTop.fillStyle = theme.text;
+            ctxTop.fillText('Slit a', x_slit, padY - 10);
+            ctxTop.fillText('Screen', x_screen, padY - 10);
+
+            // Distance marker D
+            ctxTop.strokeStyle = theme.axis;
+            ctxTop.beginPath();
+            ctxTop.moveTo(x_slit, padY + h + 10); ctxTop.lineTo(x_screen, padY + h + 10);
+            ctxTop.moveTo(x_slit, padY + h + 5); ctxTop.lineTo(x_slit, padY + h + 15);
+            ctxTop.moveTo(x_screen, padY + h + 5); ctxTop.lineTo(x_screen, padY + h + 15);
+            ctxTop.stroke();
+            ctxTop.fillText('Distance D', x_slit + (x_screen-x_slit)/2, padY + h + 25);
+        }
+
+        function drawAll() {
+            if (distance_screen_D_meters === 0) return; // Prevent early draw
+            const theme = getTheme();
+            drawIntensity(theme);
+            drawScreen(theme);
+            drawTopDown(theme);
+        }
+
+        // Boot
+        resizeCanvases();
+        updatePhysics();
+    </script>
+</body>
+</html>
