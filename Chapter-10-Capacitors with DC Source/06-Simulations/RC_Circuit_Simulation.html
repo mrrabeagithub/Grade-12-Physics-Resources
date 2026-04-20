@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Circuit Dynamics | By Rabih A.G.</title>
+    
+    <!-- Tailwind CSS for rapid, responsive, premium UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MathJax for rigorous LaTeX equation rendering -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <script>
+        // Tailwind Dark Mode configuration
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 500: '#3b82f6', 600: '#2563eb' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar and range slider styling for a polished EdTech feel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        .dark input[type=range]::-webkit-slider-runnable-track {
+            background: #475569;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300 min-h-screen flex flex-col font-sans">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 py-4 px-6 flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Transient Dynamics of RC Circuits
+            </h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Advanced High-Precision Simulation | By Rabih A.G.</p>
+        </div>
+        
+        <!-- Dark Mode Toggle -> Specific Directive: Yellowish/Golden Sun, Silver Moon -->
+        <button id="themeToggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center border border-slate-300 dark:border-slate-600" title="Toggle Theme">
+            <!-- Sun Icon (Golden) visible in dark mode -->
+            <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" style="color: #FFD700; stroke: #FFD700;" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <!-- Moon Icon (Silver) visible in light mode -->
+            <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block dark:hidden" style="color: #C0C0C0; fill: #C0C0C0;" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+            </svg>
+        </button>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Control Panel -->
+        <aside class="w-full lg:w-96 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-6 overflow-y-auto shadow-inner">
+            
+            <div class="bg-slate-100 dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                <h2 class="text-lg font-semibold mb-2">Switch State</h2>
+                <div class="flex gap-2">
+                    <button id="btnCharge" class="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded transition-colors shadow-sm">
+                        Position 1 (Charge)
+                    </button>
+                    <button id="btnDischarge" class="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded transition-colors shadow-sm opacity-50">
+                        Position 2 (Decay)
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">Current State: <span id="statusText" class="font-bold text-green-600 dark:text-green-400">Charging (Growth)</span></p>
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold border-b border-slate-200 dark:border-slate-700 pb-2">Circuit Parameters</h2>
+                
+                <!-- EMF Input -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium">Source EMF ($E$)</label>
+                        <span id="valE" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">12 V</span>
+                    </div>
+                    <input type="range" id="sliderE" min="1" max="24" step="1" value="12">
+                </div>
+
+                <!-- Capacitance Input -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium">Capacitance ($C$)</label>
+                        <span id="valC" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">100 mF</span>
+                    </div>
+                    <input type="range" id="sliderC" min="10" max="1000" step="10" value="100">
+                </div>
+
+                <!-- External Resistor -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium">External Resistor ($R$)</label>
+                        <span id="valR" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">10 &Omega;</span>
+                    </div>
+                    <input type="range" id="sliderR" min="1" max="50" step="1" value="10">
+                </div>
+
+                <!-- Internal Resistance -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium">Internal Resistance ($r$)</label>
+                        <span id="valr" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">2 &Omega;</span>
+                    </div>
+                    <input type="range" id="sliderr" min="0" max="10" step="0.5" value="2">
+                </div>
+
+                <!-- Simulation Speed Control -->
+                <div class="pt-3 mt-2 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium text-brand-600 dark:text-brand-400">Simulation Speed</label>
+                        <span id="valSpeed" class="text-sm font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">1.0x</span>
+                    </div>
+                    <input type="range" id="sliderSpeed" min="0.1" max="10.0" step="0.1" value="1.0">
+                </div>
+            </div>
+
+            <!-- Mathematical Governing Equations Box -->
+            <div class="mt-auto bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
+                <h3 class="font-semibold text-blue-800 dark:text-blue-300 mb-2">Governing Physics (KVL)</h3>
+                <p class="mb-1">Growth: $$R_{eq}C\frac{du_C}{dt} + u_C = E$$</p>
+                <p>Decay: $$R_{eq}C\frac{du_C}{dt} + u_C = 0$$</p>
+                <p class="mt-2 text-xs text-blue-700 dark:text-blue-400">Where $R_{eq} = R + r$. 1st Order Linear ODE.</p>
+            </div>
+
+            <button id="btnReset" class="w-full py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-medium rounded transition-colors shadow-sm">
+                Reset Simulation Data
+            </button>
+        </aside>
+
+        <!-- Right Visualizations Panel (The Trinity) -->
+        <section class="flex-1 p-4 lg:p-6 grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6 overflow-y-auto">
+            
+            <!-- Plot 1: Static Time Domain Graph -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col xl:col-span-2 h-72 lg:h-80">
+                <div class="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 rounded-t-xl">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        Static Trace ($u_C$ vs $t$ from $t=0$)
+                    </h3>
+                    <span class="text-xs text-slate-500">Tracks instantaneous capacitor voltage.</span>
+                </div>
+                <div class="flex-1 relative p-2">
+                    <canvas id="canvasTimeDomain"></canvas>
+                </div>
+            </div>
+
+            <!-- Plot 2: Live Circuit Diagram -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-72 lg:h-80">
+                <div class="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 rounded-t-xl">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                        Live Circuit State
+                    </h3>
+                </div>
+                <div class="flex-1 relative p-2">
+                    <canvas id="canvasCircuit"></canvas>
+                </div>
+            </div>
+
+            <!-- Plot 3: Energy Monitor -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-72 lg:h-80">
+                <div class="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 rounded-t-xl">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Energy Dynamics
+                    </h3>
+                </div>
+                <div class="flex-1 relative p-2">
+                    <canvas id="canvasEnergy"></canvas>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Core Physics & Visualization Logic -->
+    <script>
+        // ============================================================================
+        // DIRECTIVE: Treat as Peer Expert & High-Precision Physics Engine
+        // Pedagogical focus: KVL for RC circuits as a 1st Order ODE.
+        // Integration Method: Runge-Kutta 4th Order (RK4). NEVER Standard Euler.
+        // ============================================================================
+
+        // --- 1. DOM Elements & UI State ---
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        // Theme toggle logic
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+        });
+
+        const UI = {
+            btnCharge: document.getElementById('btnCharge'),
+            btnDischarge: document.getElementById('btnDischarge'),
+            btnReset: document.getElementById('btnReset'),
+            statusText: document.getElementById('statusText'),
+            sliderE: document.getElementById('sliderE'),
+            sliderC: document.getElementById('sliderC'),
+            sliderR: document.getElementById('sliderR'),
+            sliderr: document.getElementById('sliderr'),
+            sliderSpeed: document.getElementById('sliderSpeed'),
+            valE: document.getElementById('valE'),
+            valC: document.getElementById('valC'),
+            valR: document.getElementById('valR'),
+            valr: document.getElementById('valr'),
+            valSpeed: document.getElementById('valSpeed')
+        };
+
+        // --- 2. Physical Parameters (Verbose Naming Enforced) ---
+        let electromotive_force_E_volts = parseFloat(UI.sliderE.value);
+        let capacitance_C_farads = parseFloat(UI.sliderC.value) / 1000.0; // Slider is in mF
+        let external_resistance_R_ohms = parseFloat(UI.sliderR.value);
+        let internal_resistance_r_ohms = parseFloat(UI.sliderr.value);
+        let total_equivalent_resistance_ohms = external_resistance_R_ohms + internal_resistance_r_ohms;
+        let simulation_speed_multiplier = parseFloat(UI.sliderSpeed.value);
+
+        // --- 3. Simulation State Variables ---
+        let is_circuit_charging = true; 
+        let simulation_time_seconds_t = 0.0;
+        let capacitor_voltage_volts_uc = 0.0;
+        let current_intensity_amperes_I = 0.0;
+        let rate_of_change_of_uc_dUcdt = 0.0;
+        
+        // State tracking for the new static plot logic (from t=0 at switch flip)
+        let initial_voltage_at_switch_volts = 0.0;
+        
+        // Energy Tracking (Joules)
+        let electric_potential_energy_U_E = 0.0;
+        let total_energy_dissipated_Joule_heating = 0.0;
+        let total_energy_supplied_by_source = 0.0;
+
+        // Data history for Time Domain plot
+        let history_time_array = [];
+        let history_uc_array = [];
+
+        // --- 4. Event Listeners for User Interaction ---
+        function updateParameters() {
+            electromotive_force_E_volts = parseFloat(UI.sliderE.value);
+            capacitance_C_farads = parseFloat(UI.sliderC.value) / 1000.0;
+            external_resistance_R_ohms = parseFloat(UI.sliderR.value);
+            internal_resistance_r_ohms = parseFloat(UI.sliderr.value);
+            total_equivalent_resistance_ohms = external_resistance_R_ohms + internal_resistance_r_ohms;
+            
+            UI.valE.innerHTML = `${electromotive_force_E_volts} V`;
+            UI.valC.innerHTML = `${UI.sliderC.value} mF`;
+            UI.valR.innerHTML = `${external_resistance_R_ohms} &Omega;`;
+            UI.valr.innerHTML = `${internal_resistance_r_ohms} &Omega;`;
+        }
+
+        [UI.sliderE, UI.sliderC, UI.sliderR, UI.sliderr].forEach(slider => {
+            slider.addEventListener('input', updateParameters);
+        });
+
+        UI.sliderSpeed.addEventListener('input', () => {
+            simulation_speed_multiplier = parseFloat(UI.sliderSpeed.value);
+            UI.valSpeed.innerHTML = `${simulation_speed_multiplier.toFixed(1)}x`;
+        });
+
+        // Toggle Switch -> Resets Time to 0 and traces the new regime statically
+        UI.btnCharge.addEventListener('click', () => {
+            if (is_circuit_charging) return;
+            is_circuit_charging = true;
+            UI.btnCharge.classList.remove('opacity-50');
+            UI.btnDischarge.classList.add('opacity-50');
+            UI.statusText.textContent = "Charging (Growth)";
+            UI.statusText.className = "font-bold text-green-600 dark:text-green-400";
+            
+            // Re-anchor the static plot to track progress beyond this t=0
+            initial_voltage_at_switch_volts = capacitor_voltage_volts_uc;
+            simulation_time_seconds_t = 0.0;
+            history_time_array = [];
+            history_uc_array = [];
+        });
+
+        UI.btnDischarge.addEventListener('click', () => {
+            if (!is_circuit_charging) return;
+            is_circuit_charging = false;
+            UI.btnDischarge.classList.remove('opacity-50');
+            UI.btnCharge.classList.add('opacity-50');
+            UI.statusText.textContent = "Decay (Discharging)";
+            UI.statusText.className = "font-bold text-red-600 dark:text-red-400";
+
+            // Re-anchor the static plot to track progress beyond this t=0
+            initial_voltage_at_switch_volts = capacitor_voltage_volts_uc;
+            simulation_time_seconds_t = 0.0;
+            history_time_array = [];
+            history_uc_array = [];
+        });
+
+        UI.btnReset.addEventListener('click', () => {
+            simulation_time_seconds_t = 0.0;
+            capacitor_voltage_volts_uc = 0.0;
+            current_intensity_amperes_I = 0.0;
+            initial_voltage_at_switch_volts = 0.0;
+            rate_of_change_of_uc_dUcdt = 0.0;
+            total_energy_dissipated_Joule_heating = 0.0;
+            total_energy_supplied_by_source = 0.0;
+            history_time_array = [];
+            history_uc_array = [];
+            
+            if (!is_circuit_charging) UI.btnCharge.click();
+        });
+
+        // --- 5. High-Precision Physics Engine (RK4 Integration) ---
+        
+        // The differential equation derived from KVL: dUc/dt = (E - Uc) / (R_eq * C)
+        function calculate_derivative_dUcdt(current_u_c, is_charging) {
+            const active_EMF = is_charging ? electromotive_force_E_volts : 0.0;
+            return (active_EMF - current_u_c) / (total_equivalent_resistance_ohms * capacitance_C_farads);
+        }
+
+        function physics_step_RK4(time_step_dt_seconds) {
+            // Step 1: Evaluate derivative at initial state
+            let k1_slope = calculate_derivative_dUcdt(capacitor_voltage_volts_uc, is_circuit_charging);
+            
+            // Step 2: Evaluate at halfway point using k1
+            let uc_half_step_1 = capacitor_voltage_volts_uc + 0.5 * k1_slope * time_step_dt_seconds;
+            let k2_slope = calculate_derivative_dUcdt(uc_half_step_1, is_circuit_charging);
+            
+            // Step 3: Evaluate at halfway point using k2
+            let uc_half_step_2 = capacitor_voltage_volts_uc + 0.5 * k2_slope * time_step_dt_seconds;
+            let k3_slope = calculate_derivative_dUcdt(uc_half_step_2, is_circuit_charging);
+            
+            // Step 4: Evaluate at end point using k3
+            let uc_full_step = capacitor_voltage_volts_uc + k3_slope * time_step_dt_seconds;
+            let k4_slope = calculate_derivative_dUcdt(uc_full_step, is_circuit_charging);
+            
+            // Weighted average of slopes
+            rate_of_change_of_uc_dUcdt = (k1_slope + 2*k2_slope + 2*k3_slope + k4_slope) / 6.0;
+            
+            // Update physical state
+            capacitor_voltage_volts_uc += rate_of_change_of_uc_dUcdt * time_step_dt_seconds;
+            simulation_time_seconds_t += time_step_dt_seconds;
+
+            // Current derived from capacitor dynamics (I = C * dUc/dt)
+            current_intensity_amperes_I = capacitance_C_farads * rate_of_change_of_uc_dUcdt;
+
+            // Compute Energies (Integrating Power)
+            let instantaneous_power_dissipated = current_intensity_amperes_I * current_intensity_amperes_I * total_equivalent_resistance_ohms;
+            total_energy_dissipated_Joule_heating += instantaneous_power_dissipated * time_step_dt_seconds;
+
+            if (is_circuit_charging) {
+                let instantaneous_power_supplied = electromotive_force_E_volts * current_intensity_amperes_I;
+                total_energy_supplied_by_source += instantaneous_power_supplied * time_step_dt_seconds;
+            }
+
+            // Electric Potential Energy stored in Capacitor (U_E = 1/2 * C * Uc^2)
+            electric_potential_energy_U_E = 0.5 * capacitance_C_farads * capacitor_voltage_volts_uc * capacitor_voltage_volts_uc;
+
+            // Accumulate history continuously for the static graph
+            history_time_array.push(simulation_time_seconds_t);
+            history_uc_array.push(capacitor_voltage_volts_uc);
+        }
+
+        // --- 6. The "Trinity" Visualizations (Canvas API) ---
+        const canvasTime = document.getElementById('canvasTimeDomain');
+        const ctxTime = canvasTime.getContext('2d');
+        const canvasCircuit = document.getElementById('canvasCircuit');
+        const ctxCircuit = canvasCircuit.getContext('2d');
+        const canvasEnergy = document.getElementById('canvasEnergy');
+        const ctxEnergy = canvasEnergy.getContext('2d');
+
+        function resizeCanvases() {
+            const canvases = [canvasTime, canvasCircuit, canvasEnergy];
+            canvases.forEach(c => {
+                c.width = c.parentElement.clientWidth;
+                c.height = c.parentElement.clientHeight;
+            });
+        }
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases(); // Initial sizing
+
+        function getThemeColors() {
+            const isDark = html.classList.contains('dark');
+            return {
+                grid: isDark ? '#334155' : '#e2e8f0',
+                axis: isDark ? '#94a3b8' : '#475569',
+                text: isDark ? '#cbd5e1' : '#334155',
+                lineTime: '#3b82f6',     // Blue
+                lineTheo: isDark ? '#64748b' : '#94a3b8', // Gray for theoretical curve
+                barUE: '#3b82f6',        // Blue (Electric)
+                barDissipated: '#ef4444',// Red (Heat)
+                barSource: '#10b981'     // Green (Source)
+            };
+        }
+
+        // Visualization 1: Static Time Domain (Progress beyond t=0)
+        function renderTimeDomain(colors) {
+            ctxTime.clearRect(0, 0, canvasTime.width, canvasTime.height);
+
+            const padX = 60, padY = 30;
+            const w = canvasTime.width - padX * 2;
+            const h = canvasTime.height - padY * 2;
+
+            // Compute physics constants
+            const time_constant_tau = capacitance_C_farads * total_equivalent_resistance_ohms;
+            const U_max_theoretical = electromotive_force_E_volts;
+            
+            // Fix X-axis to 10 Tau
+            const num_tau_display = 10;
+            const x_max = num_tau_display * time_constant_tau;
+            const y_max = Math.max(U_max_theoretical * 1.2, 0.1); 
+
+            // Draw Axes
+            ctxTime.strokeStyle = colors.axis;
+            ctxTime.lineWidth = 1;
+            ctxTime.beginPath();
+            ctxTime.moveTo(padX, padY);
+            ctxTime.lineTo(padX, padY + h); // Y-axis
+            ctxTime.lineTo(padX + w, padY + h); // X-axis
+            ctxTime.stroke();
+
+            // Draw X-axis Tau Divisions and Grid Lines
+            ctxTime.fillStyle = colors.text;
+            ctxTime.font = '11px sans-serif';
+            ctxTime.textAlign = 'center';
+            ctxTime.textBaseline = 'top';
+
+            for (let i = 1; i <= num_tau_display; i++) {
+                let x_tick = padX + (i * time_constant_tau / x_max) * w;
+                
+                // Draw vertical grid line
+                ctxTime.strokeStyle = colors.grid;
+                ctxTime.beginPath();
+                ctxTime.moveTo(x_tick, padY);
+                ctxTime.lineTo(x_tick, padY + h);
+                ctxTime.stroke();
+
+                // Draw tick mark
+                ctxTime.strokeStyle = colors.axis;
+                ctxTime.beginPath();
+                ctxTime.moveTo(x_tick, padY + h);
+                ctxTime.lineTo(x_tick, padY + h + 5);
+                ctxTime.stroke();
+
+                // Label tick
+                ctxTime.fillText(`${i}τ`, x_tick, padY + h + 8);
+            }
+            ctxTime.textBaseline = 'alphabetic'; // Reset
+
+            // Y-Axis Max Label
+            ctxTime.fillStyle = colors.text;
+            ctxTime.font = '12px sans-serif';
+            ctxTime.textAlign = 'right';
+            ctxTime.fillText(`${y_max.toFixed(2)} V`, padX - 5, padY + 10);
+            ctxTime.fillText('0', padX - 5, padY + h);
+            
+            // Dynamic Time Axis Legend
+            ctxTime.textAlign = 'center';
+            ctxTime.fillText(`Time (s) [ 1 Div = 1τ = ${time_constant_tau.toFixed(4)} s ]`, padX + w / 2, padY + h + 30);
+
+            // --- Dynamic Horizontal Asymptote at the u-axis ---
+            let active_asymptote_val = is_circuit_charging ? U_max_theoretical : 0.0;
+            const y_asymp = padY + h - (active_asymptote_val / y_max) * h;
+            
+            ctxTime.strokeStyle = is_circuit_charging ? colors.barSource : colors.barDissipated;
+            ctxTime.setLineDash([5, 5]);
+            ctxTime.beginPath();
+            ctxTime.moveTo(padX, y_asymp);
+            ctxTime.lineTo(padX + w, y_asymp);
+            ctxTime.stroke();
+            ctxTime.setLineDash([]); 
+
+            // Label the asymptote directly on the u-axis
+            ctxTime.fillStyle = is_circuit_charging ? colors.barSource : colors.barDissipated;
+            ctxTime.font = 'bold 11px sans-serif';
+            ctxTime.textAlign = 'right';
+            ctxTime.textBaseline = 'middle';
+            let asymp_label = is_circuit_charging ? `E = ${active_asymptote_val.toFixed(2)}V` : `0.00V`;
+            ctxTime.fillText(asymp_label, padX - 5, y_asymp);
+            ctxTime.textBaseline = 'alphabetic'; // Reset
+
+            // --- Enable Clipping Region to prevent drawing outside the graph area ---
+            ctxTime.save();
+            ctxTime.beginPath();
+            ctxTime.rect(padX, padY, w, h);
+            ctxTime.clip();
+
+            // --- Draw Theoretical Shadow Curve ---
+            ctxTime.strokeStyle = colors.lineTheo;
+            ctxTime.lineWidth = 2;
+            ctxTime.setLineDash([4, 4]);
+            ctxTime.beginPath();
+            const segments = 200; 
+            for (let i = 0; i <= segments; i++) {
+                let t_plot = (i / segments) * x_max;
+                let Uc_theo = 0;
+                if (is_circuit_charging) {
+                    Uc_theo = initial_voltage_at_switch_volts * Math.exp(-t_plot / time_constant_tau) 
+                           + U_max_theoretical * (1 - Math.exp(-t_plot / time_constant_tau));
+                } else {
+                    Uc_theo = initial_voltage_at_switch_volts * Math.exp(-t_plot / time_constant_tau);
+                }
+                let x = padX + (t_plot / x_max) * w;
+                let y = padY + h - (Uc_theo / y_max) * h;
+                if (i === 0) ctxTime.moveTo(x, y);
+                else ctxTime.lineTo(x, y);
+            }
+            ctxTime.stroke();
+            ctxTime.setLineDash([]);
+
+            // --- Draw Simulated RK4 Trace ---
+            if (history_time_array.length > 0) {
+                ctxTime.strokeStyle = is_circuit_charging ? colors.barSource : colors.barDissipated;
+                ctxTime.lineWidth = 3;
+                ctxTime.beginPath();
+                for (let i = 0; i < history_time_array.length; i++) {
+                    let x = padX + (history_time_array[i] / x_max) * w;
+                    let y = padY + h - (history_uc_array[i] / y_max) * h;
+                    if (i === 0) ctxTime.moveTo(x, y);
+                    else ctxTime.lineTo(x, y);
+                }
+                ctxTime.stroke();
+            }
+
+            // --- Highlight Voltage at t = 1 Tau ---
+            let U_at_tau = 0;
+            
+            if (is_circuit_charging) {
+                U_at_tau = initial_voltage_at_switch_volts * Math.exp(-1) + U_max_theoretical * (1 - Math.exp(-1));
+            } else {
+                U_at_tau = initial_voltage_at_switch_volts * Math.exp(-1);
+            }
+            
+            let labelText = ` t=τ, u_C=${U_at_tau.toFixed(2)}V`;
+
+            let x_tau = padX + (1 * time_constant_tau / x_max) * w;
+            let y_tau = padY + h - (U_at_tau / y_max) * h;
+
+            // Draw dashed lines projecting to axes
+            ctxTime.strokeStyle = colors.text;
+            ctxTime.lineWidth = 1;
+            ctxTime.setLineDash([3, 3]);
+            ctxTime.beginPath();
+            ctxTime.moveTo(padX, y_tau);
+            ctxTime.lineTo(x_tau, y_tau);
+            ctxTime.moveTo(x_tau, padY + h);
+            ctxTime.lineTo(x_tau, y_tau);
+            ctxTime.stroke();
+            ctxTime.setLineDash([]);
+
+            // Draw prominent dot
+            ctxTime.fillStyle = is_circuit_charging ? colors.barSource : colors.barDissipated;
+            ctxTime.beginPath();
+            ctxTime.arc(x_tau, y_tau, 5, 0, Math.PI * 2);
+            ctxTime.fill();
+
+            // Label the point
+            ctxTime.fillStyle = colors.text;
+            ctxTime.font = '11px sans-serif';
+            ctxTime.textAlign = 'left';
+            ctxTime.fillText(labelText, x_tau + 5, y_tau - 8);
+
+            // Restore canvas state (removes clipping mask)
+            ctxTime.restore();
+        }
+
+        // Visualization 2: Live Circuit Diagram
+        function renderCircuit(colors) {
+            ctxCircuit.clearRect(0, 0, canvasCircuit.width, canvasCircuit.height);
+            
+            const padX = 40, padY = 40;
+            const w = canvasCircuit.width - padX * 2;
+            const h = canvasCircuit.height - padY * 2;
+            
+            // Vertical Branch X-Coordinates
+            const x1 = padX;                 // Left (Battery)
+            const x2 = padX + w * 0.45;      // Middle (Discharge Wire)
+            const x3 = padX + w;             // Right (C, R)
+            
+            const yTop = padY;
+            const yBot = padY + h;
+            
+            ctxCircuit.lineWidth = 2.5;
+            ctxCircuit.lineCap = 'round';
+            ctxCircuit.lineJoin = 'round';
+            
+            const colorActive = is_circuit_charging ? colors.barSource : colors.barDissipated;
+            const colorInactive = colors.grid;
+            
+            // --- Helper Functions ---
+            const drawLine = (x_a, y_a, x_b, y_b, color) => {
+                ctxCircuit.strokeStyle = color;
+                ctxCircuit.beginPath(); ctxCircuit.moveTo(x_a, y_a); ctxCircuit.lineTo(x_b, y_b); ctxCircuit.stroke();
+            };
+
+            const drawContact = (x, y, label) => {
+                ctxCircuit.fillStyle = colors.text;
+                ctxCircuit.beginPath(); ctxCircuit.arc(x, y, 4, 0, Math.PI*2); ctxCircuit.fill();
+                ctxCircuit.font = '12px font-sans font-bold';
+                ctxCircuit.fillText(label, x - 5, y - 10);
+            };
+
+            // 1. Right Branch (Always active: Capacitor + Resistor)
+            ctxCircuit.strokeStyle = colorActive;
+            ctxCircuit.beginPath();
+            ctxCircuit.moveTo(x3, yBot);
+            
+            // Resistor (Zig-zag)
+            let rY = yTop + h * 0.7;
+            ctxCircuit.lineTo(x3, rY + 20);
+            for(let i=0; i<7; i++) {
+                ctxCircuit.lineTo(x3 + (i%2===0?-10:10), rY + 15 - i*5);
+            }
+            ctxCircuit.lineTo(x3, rY - 20);
+            
+            // Capacitor (Parallel Plates)
+            let cY = yTop + h * 0.3;
+            ctxCircuit.lineTo(x3, cY + 10);
+            ctxCircuit.stroke(); // Finish bottom wire
+            
+            // Draw Bottom Plate
+            ctxCircuit.beginPath();
+            ctxCircuit.moveTo(x3 - 15, cY + 10);
+            ctxCircuit.lineTo(x3 + 15, cY + 10);
+            ctxCircuit.stroke();
+
+            // Draw Top Plate
+            ctxCircuit.beginPath();
+            ctxCircuit.moveTo(x3 - 15, cY - 10);
+            ctxCircuit.lineTo(x3 + 15, cY - 10);
+            ctxCircuit.stroke();
+
+            // Continue wire to top
+            ctxCircuit.beginPath();
+            ctxCircuit.moveTo(x3, cY - 10);
+            ctxCircuit.lineTo(x3, yTop);
+            ctxCircuit.stroke();
+
+            // IMPROVEMENT: Visual Capacitor Charge Accumulation
+            let charge_ratio = capacitor_voltage_volts_uc / Math.max(electromotive_force_E_volts, 0.1);
+            charge_ratio = Math.max(0, Math.min(1, charge_ratio));
+
+            if (charge_ratio > 0.05) {
+                ctxCircuit.fillStyle = `rgba(239, 68, 68, ${charge_ratio})`; // Red +
+                ctxCircuit.font = 'bold 16px sans-serif';
+                ctxCircuit.textAlign = 'center';
+                ctxCircuit.textBaseline = 'middle';
+                ctxCircuit.fillText('+', x3, cY - 20);
+                ctxCircuit.fillText('+', x3 - 12, cY - 20);
+                ctxCircuit.fillText('+', x3 + 12, cY - 20);
+
+                ctxCircuit.fillStyle = `rgba(59, 130, 246, ${charge_ratio})`; // Blue -
+                ctxCircuit.fillText('-', x3, cY + 20);
+                ctxCircuit.fillText('-', x3 - 12, cY + 20);
+                ctxCircuit.fillText('-', x3 + 12, cY + 20);
+            }
+            ctxCircuit.textBaseline = 'alphabetic'; // Reset
+
+            // IMPROVEMENT: Dynamic Current Arrow Indicator
+            let I_max = electromotive_force_E_volts / total_equivalent_resistance_ohms;
+            let i_ratio = current_intensity_amperes_I / I_max;
+
+            if (Math.abs(i_ratio) > 0.02) {
+                ctxCircuit.fillStyle = colors.barUE; 
+                ctxCircuit.beginPath();
+                
+                let arrowX_R = x3;
+                let arrowY_R = yTop + 25; 
+                let dir = current_intensity_amperes_I > 0 ? 1 : -1;
+                let size = 4 + 8 * Math.abs(i_ratio); 
+                
+                ctxCircuit.moveTo(arrowX_R - size/1.5, arrowY_R - dir*size);
+                ctxCircuit.lineTo(arrowX_R + size/1.5, arrowY_R - dir*size);
+                ctxCircuit.lineTo(arrowX_R, arrowY_R + dir*size);
+                ctxCircuit.fill();
+                
+                ctxCircuit.fillStyle = colors.text;
+                ctxCircuit.font = 'italic 12px serif';
+                ctxCircuit.textAlign = 'right';
+                ctxCircuit.fillText('i', arrowX_R - 15, arrowY_R + 5);
+            }
+
+            // Labels
+            ctxCircuit.fillStyle = colors.text;
+            ctxCircuit.textAlign = 'left';
+            ctxCircuit.fillText('R, r', x3 + 20, rY);
+            ctxCircuit.fillText('C', x3 + 20, cY);
+
+            // 2. Bottom Wire Connecting All
+            drawLine(x3, yBot, x2, yBot, colorActive); // Right to Mid is always active
+            drawLine(x2, yBot, x1, yBot, is_circuit_charging ? colorActive : colorInactive);
+
+            // 3. Middle Branch (Discharge Wire)
+            drawLine(x2, yBot, x2, yTop + 5, is_circuit_charging ? colorInactive : colorActive);
+
+            // 4. Left Branch (Battery)
+            let colorLeft = is_circuit_charging ? colorActive : colorInactive;
+            ctxCircuit.strokeStyle = colorLeft;
+            ctxCircuit.beginPath();
+            ctxCircuit.moveTo(x1, yBot);
+            ctxCircuit.lineTo(x1, yTop + h/2 + 10);
+            ctxCircuit.moveTo(x1, yTop + h/2 - 10);
+            ctxCircuit.lineTo(x1, yTop + 5);
+            ctxCircuit.stroke();
+            
+            // Battery Plates
+            ctxCircuit.beginPath();
+            ctxCircuit.moveTo(x1 - 15, yTop + h/2 - 10);
+            ctxCircuit.lineTo(x1 + 15, yTop + h/2 - 10); // Positive (Long)
+            ctxCircuit.moveTo(x1 - 8, yTop + h/2 + 10);
+            ctxCircuit.lineTo(x1 + 8, yTop + h/2 + 10); // Negative (Short)
+            ctxCircuit.stroke();
+            
+            ctxCircuit.fillStyle = colors.text;
+            ctxCircuit.fillText('E', x1 - 25, yTop + h/2 + 5);
+
+            // 5. SPDT Switch
+            drawContact(x1, yTop, '1'); // Charge Contact
+            drawContact(x2, yTop, '2'); // Discharge Contact
+            drawContact(x3, yTop, '');  // Pivot
+            
+            // Switch Blade
+            ctxCircuit.strokeStyle = colors.text;
+            ctxCircuit.lineWidth = 3;
+            ctxCircuit.beginPath();
+            ctxCircuit.moveTo(x3, yTop);
+            if (is_circuit_charging) {
+                ctxCircuit.lineTo(x1, yTop); // Connect to 1
+            } else {
+                ctxCircuit.lineTo(x2, yTop); // Connect to 2
+            }
+            ctxCircuit.stroke();
+        }
+
+        // Visualization 3: Energy Bar Chart (Live Dynamics)
+        function renderEnergyMonitor(colors) {
+            ctxEnergy.clearRect(0, 0, canvasEnergy.width, canvasEnergy.height);
+
+            const padX = 40, padY = 40;
+            const w = canvasEnergy.width - padX * 2;
+            const h = canvasEnergy.height - padY * 2;
+
+            const max_energy_display = Math.max(
+                electric_potential_energy_U_E,
+                total_energy_dissipated_Joule_heating,
+                total_energy_supplied_by_source,
+                0.1 
+            );
+            
+            const y_scale = max_energy_display * 1.1;
+
+            const bars = [
+                { label: 'U_E (Electric)', value: electric_potential_energy_U_E, color: colors.barUE },
+                { label: 'E_Heat (Resistors)', value: total_energy_dissipated_Joule_heating, color: colors.barDissipated },
+                { label: 'E_Source (Total)', value: total_energy_supplied_by_source, color: colors.barSource }
+            ];
+
+            const barWidth = (w / bars.length) * 0.6;
+            const spacing = (w / bars.length);
+
+            // Draw Base Line
+            ctxEnergy.strokeStyle = colors.axis;
+            ctxEnergy.beginPath();
+            ctxEnergy.moveTo(padX, padY + h);
+            ctxEnergy.lineTo(padX + w, padY + h);
+            ctxEnergy.stroke();
+
+            ctxEnergy.fillStyle = colors.text;
+            ctxEnergy.textAlign = 'right';
+            ctxEnergy.font = '11px sans-serif';
+            ctxEnergy.fillText(`${y_scale.toFixed(1)} J`, padX - 5, padY + 10);
+
+            // Draw Bars
+            bars.forEach((bar, index) => {
+                const barHeight = (bar.value / y_scale) * h;
+                const x = padX + spacing * index + (spacing - barWidth) / 2;
+                const y = padY + h - barHeight;
+
+                ctxEnergy.fillStyle = bar.color;
+                ctxEnergy.fillRect(x, y, barWidth, barHeight);
+
+                ctxEnergy.fillStyle = colors.text;
+                ctxEnergy.textAlign = 'center';
+                ctxEnergy.fillText(bar.label.split(' ')[0], x + barWidth / 2, padY + h + 15);
+                ctxEnergy.fillText(bar.value.toFixed(2), x + barWidth / 2, y - 5);
+            });
+        }
+
+        // --- 7. Main Animation Loop ---
+        let last_time_timestamp_ms = 0;
+
+        function animation_loop(current_timestamp_ms) {
+            if (last_time_timestamp_ms === 0) {
+                last_time_timestamp_ms = current_timestamp_ms;
+            }
+            
+            let real_dt_seconds = (current_timestamp_ms - last_time_timestamp_ms) / 1000.0;
+            last_time_timestamp_ms = current_timestamp_ms;
+
+            if (real_dt_seconds > 0.1) real_dt_seconds = 0.1;
+
+            let simulation_dt = real_dt_seconds * simulation_speed_multiplier;
+            physics_step_RK4(simulation_dt);
+
+            const themeColors = getThemeColors();
+            renderTimeDomain(themeColors);
+            renderCircuit(themeColors);
+            renderEnergyMonitor(themeColors);
+
+            requestAnimationFrame(animation_loop);
+        }
+
+        // Initialize simulation
+        updateParameters();
+        requestAnimationFrame(animation_loop);
+
+    </script>
+</body>
+</html>
