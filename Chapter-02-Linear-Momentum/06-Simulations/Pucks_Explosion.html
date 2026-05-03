@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recoil Lab: Two-Body Spring Explosion</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- MathJax -->
+    <script>
+        tailwind.config = { darkMode: 'class' };
+        window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, svg: { fontCache: 'global' } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .chart-wrapper { position: relative; height: 220px; width: 100%; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="bg-slate-800 dark:bg-slate-950 text-white p-3 shadow-md flex justify-between items-center z-50 shrink-0 border-b border-slate-700">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-rose-600 rounded flex items-center justify-center font-bold text-lg shadow-inner border border-rose-400">
+                P
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Recoil Lab: Puck Explosion <span class="text-xs font-normal text-slate-400 ml-1">(by Rabih A.G.)</span></h1>
+                <p class="text-xs text-slate-400">Momentum Conservation & Spring Potential</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-xs text-right hidden sm:block text-slate-400">
+                <p>Status: Ready</p>
+            </div>
+            <!-- Theme Toggle: Yellow Sun / Silver Moon -->
+            <button onclick="ui.toggleTheme()" id="btn-theme" class="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-all border border-slate-600 text-xl text-slate-400">
+                🌙
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-80 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0 overflow-y-auto shadow-xl z-40">
+            <!-- Controls -->
+            <div class="p-5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                <div class="flex gap-2 mb-4">
+                    <button id="btn-play" onclick="sim.togglePlay()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded font-bold transition-colors shadow-sm flex justify-center items-center gap-2">
+                        <span>▶</span> Run Event
+                    </button>
+                    <button onclick="sim.reset()" class="px-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded transition-colors" title="Reset">
+                        ↺
+                    </button>
+                </div>
+                <div class="text-center font-mono text-xs text-slate-500">
+                    Time: <span id="lbl-time" class="font-bold text-slate-900 dark:text-white">0.000</span> s
+                </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Mass A -->
+                <div class="group">
+                    <div class="flex justify-between text-sm mb-1">
+                        <label class="text-rose-500 font-bold">Mass A ($M_A$)</label>
+                        <span class="mono font-bold text-rose-600 dark:text-rose-400"><span id="val-ma">0.10</span> kg</span>
+                    </div>
+                    <input type="range" id="in-ma" min="0.01" max="0.5" step="0.01" value="0.10" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-500 dark:bg-slate-700" oninput="ui.updateParams()">
+                </div>
+
+                <!-- Mass B -->
+                <div class="group">
+                    <div class="flex justify-between text-sm mb-1">
+                        <label class="text-blue-500 font-bold">Mass B ($M_B$)</label>
+                        <span class="mono font-bold text-blue-600 dark:text-blue-400"><span id="val-mb">0.05</span> kg</span>
+                    </div>
+                    <input type="range" id="in-mb" min="0.01" max="0.5" step="0.01" value="0.05" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500 dark:bg-slate-700" oninput="ui.updateParams()">
+                </div>
+
+                <!-- Spring Constant -->
+                <div class="group">
+                    <div class="flex justify-between text-sm mb-1">
+                        <label>Spring Constant ($k$)</label>
+                        <span class="mono font-bold text-slate-600 dark:text-slate-400"><span id="val-k">120</span> N/m</span>
+                    </div>
+                    <input type="range" id="in-k" min="10" max="200" step="5" value="120" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500 dark:bg-slate-700" oninput="ui.updateParams()">
+                </div>
+                
+                <!-- Initial Compression -->
+                <div class="group">
+                    <div class="flex justify-between text-sm mb-1">
+                        <label>Compression ($\Delta x$)</label>
+                        <span class="mono font-bold text-slate-600 dark:text-slate-400"><span id="val-dx">0.05</span> m</span>
+                    </div>
+                    <input type="range" id="in-dx" min="0.01" max="0.09" step="0.01" value="0.05" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500 dark:bg-slate-700" oninput="ui.updateParams()">
+                </div>
+
+                <!-- Analysis Output -->
+                <div class="bg-slate-100 dark:bg-slate-900 p-3 rounded border border-slate-200 dark:border-slate-700 text-xs mono space-y-1">
+                    <div class="font-bold text-slate-400 mb-2 border-b border-slate-300 dark:border-slate-700 pb-1">LIVE DATA</div>
+                    <div class="flex justify-between"><span>$v_A$:</span> <span id="out-va" class="text-rose-500">0.000</span> m/s</div>
+                    <div class="flex justify-between"><span>$v_B$:</span> <span id="out-vb" class="text-blue-500">0.000</span> m/s</div>
+                    <div class="flex justify-between"><span>$P_{tot}$:</span> <span id="out-ptot" class="text-purple-500">0.000</span> kg·m/s</div>
+                    <div class="flex justify-between border-t border-slate-300 dark:border-slate-700 pt-1"><span>$E_{error}$:</span> <span id="out-err" class="text-amber-500">0.000</span> J</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 dark:bg-slate-950">
+            
+            <!-- Canvas Visualizer -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-1 mb-6">
+                <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/30 rounded-t-lg">
+                    <h3 class="font-bold text-sm text-slate-600 dark:text-slate-300">Overhead Lab View</h3>
+                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500">1 px = 1 mm</span>
+                </div>
+                <div class="relative w-full h-48 bg-slate-50 dark:bg-slate-950 rounded-b-lg overflow-hidden">
+                    <canvas id="sim-canvas" class="w-full h-full block"></canvas>
+                    <div class="absolute bottom-2 left-2 text-[10px] text-slate-400 mono">Center x=0</div>
+                </div>
+            </div>
+
+            <!-- Graphs Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Velocity Time -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase mb-2">Velocity vs Time</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-vt"></canvas>
+                    </div>
+                </div>
+
+                <!-- Momentum Time -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase mb-2">Conservation of Momentum</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-pt"></canvas>
+                    </div>
+                </div>
+
+                <!-- Energy Time -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 lg:col-span-2">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase mb-2">Energy Transformation</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-et"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="h-10"></div>
+        </main>
+    </div>
+
+    <script>
+        // ==========================================
+        // PHYSICS ENGINE
+        // ==========================================
+        const physics = {
+            // Parameters (Defaults matching Python script)
+            m_a: 0.10,
+            m_b: 0.05,
+            k_spring: 120.0,
+            l_natural: 0.10,
+            l_compressed: 0.05, // Will be calculated based on natural - dx
+            
+            // State
+            t: 0,
+            x_a: 0,
+            x_b: 0,
+            v_a: 0,
+            v_b: 0,
+            
+            // Initial Energy (for error calc)
+            initial_energy: 0,
+
+            // History for graphing
+            history: { t:[], va:[], vb:[], pa:[], pb:[], ptot:[], ke:[], pe:[], me:[] },
+
+            // Resets ONLY state variables (Time, Position, Velocity)
+            resetState: function(dx) {
+                this.t = 0;
+                this.l_compressed = this.l_natural - dx;
+                
+                // Centered around 0
+                this.x_a = -this.l_compressed / 2.0;
+                this.x_b = this.l_compressed / 2.0;
+                
+                this.v_a = 0;
+                this.v_b = 0;
+
+                // Initial Potential Energy = 0.5 * k * dx^2
+                this.initial_energy = 0.5 * this.k_spring * (dx * dx);
+            },
+
+            // Resets State AND Clears History
+            reset: function(dx) {
+                this.resetState(dx);
+                this.history = { t:[], va:[], vb:[], pa:[], pb:[], ptot:[], ke:[], pe:[], me:[] };
+            },
+
+            // Semi-Implicit Euler Step
+            step: function(dt) {
+                const subSteps = 10; // Sub-stepping for stability
+                const sdt = dt / subSteps;
+
+                for(let i=0; i<subSteps; i++) {
+                    const separation = this.x_b - this.x_a;
+                    
+                    let f_spring = 0;
+                    let pe = 0;
+
+                    // Spring applies force ONLY if compressed (separation < natural length)
+                    // If separation >= natural length, the pucks lose contact with the spring/pusher
+                    if (separation < this.l_natural) {
+                        const compression = this.l_natural - separation;
+                        f_spring = this.k_spring * compression;
+                        pe = 0.5 * this.k_spring * compression**2;
+                    } else {
+                        f_spring = 0;
+                        pe = 0;
+                    }
+
+                    // Forces
+                    // Puck A (Left): Pushed to the left (negative x)
+                    const f_a = -f_spring;
+                    // Puck B (Right): Pushed to the right (positive x)
+                    const f_b = f_spring;
+
+                    // Integration: Update Velocity first
+                    this.v_a += (f_a / this.m_a) * sdt;
+                    this.v_b += (f_b / this.m_b) * sdt;
+
+                    // Integration: Update Position using new velocity
+                    this.x_a += this.v_a * sdt;
+                    this.x_b += this.v_b * sdt;
+                    
+                    this.t += sdt;
+
+                    // Only save data on the last sub-step to sync with frame
+                    if(i === subSteps - 1) {
+                         // Instantaneous Calculations
+                        const ke_a = 0.5 * this.m_a * this.v_a**2;
+                        const ke_b = 0.5 * this.m_b * this.v_b**2;
+                        const total_ke = ke_a + ke_b;
+                        
+                        const p_a = this.m_a * this.v_a;
+                        const p_b = this.m_b * this.v_b;
+                        const p_tot = p_a + p_b;
+
+                        return { 
+                            ke: total_ke, 
+                            pe: pe, 
+                            me: total_ke + pe, 
+                            pa: p_a, 
+                            pb: p_b, 
+                            ptot: p_tot 
+                        };
+                    }
+                }
+            },
+
+            // Pre-calculate 0.5 seconds of data for static graphs
+            preCalculate: function(duration, dt) {
+                // Determine dx from current state for consistency
+                const s_dx = (this.l_natural - this.l_compressed);
+                
+                // Full Reset (Clears history to start fresh)
+                this.reset(s_dx);
+                
+                const steps = Math.floor(duration / dt);
+
+                for(let i=0; i<=steps; i++) {
+                    const data = this.step(dt);
+                    
+                    // Push to history
+                    this.history.t.push(this.t.toFixed(3));
+                    this.history.va.push(this.v_a);
+                    this.history.vb.push(this.v_b);
+                    this.history.pa.push(data.pa);
+                    this.history.pb.push(data.pb);
+                    this.history.ptot.push(data.ptot);
+                    this.history.ke.push(data.ke);
+                    this.history.pe.push(data.pe);
+                    this.history.me.push(data.me);
+                }
+
+                // Restore state to t=0 for animation playback (BUT KEEP HISTORY)
+                this.resetState(s_dx);
+            }
+        };
+
+        // ==========================================
+        // UI & VISUALIZATION
+        // ==========================================
+        const ui = {
+            isDark: false,
+            isPlaying: false,
+            animId: null,
+            canvas: document.getElementById('sim-canvas'),
+            ctx: document.getElementById('sim-canvas').getContext('2d'),
+            charts: {},
+
+            init: function() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.setupCharts();
+                this.updateParams(); // Triggers pre-calc and chart update
+            },
+
+            toggleTheme: function() {
+                this.isDark = !this.isDark;
+                document.documentElement.classList.toggle('dark');
+                const btn = document.getElementById('btn-theme');
+                if(this.isDark) {
+                    btn.textContent = "☀"; 
+                    btn.classList.replace('text-slate-400', 'text-yellow-400');
+                } else {
+                    btn.textContent = "🌙"; 
+                    btn.classList.replace('text-yellow-400', 'text-slate-400');
+                }
+                this.updateChartTheme();
+                this.drawFrame();
+            },
+
+            resizeCanvas: function() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.drawFrame();
+            },
+
+            updateParams: function() {
+                // Read Inputs
+                physics.m_a = parseFloat(document.getElementById('in-ma').value);
+                physics.m_b = parseFloat(document.getElementById('in-mb').value);
+                physics.k_spring = parseFloat(document.getElementById('in-k').value);
+                const dx = parseFloat(document.getElementById('in-dx').value);
+
+                // Update Labels
+                document.getElementById('val-ma').textContent = physics.m_a.toFixed(2);
+                document.getElementById('val-mb').textContent = physics.m_b.toFixed(2);
+                document.getElementById('val-k').textContent = physics.k_spring.toFixed(0);
+                document.getElementById('val-dx').textContent = dx.toFixed(2);
+
+                // Reset Sim & Precalculate Graph Data (0.5s duration)
+                physics.reset(dx);
+                physics.preCalculate(0.5, 0.005); 
+                
+                // Update Charts with Precalculated Data
+                this.updateStaticCharts();
+
+                // Stop any running animation and draw initial frame
+                this.stop();
+                document.getElementById('lbl-time').textContent = "0.000";
+                this.drawFrame();
+            },
+
+            drawFrame: function() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                const cx = w / 2;
+                const cy = h / 2;
+
+                ctx.clearRect(0, 0, w, h);
+
+                // Colors
+                const colGrid = this.isDark ? '#334155' : '#e2e8f0';
+                const colA = '#f43f5e'; // Rose
+                const colB = '#3b82f6'; // Blue
+                const colSpring = this.isDark ? '#cbd5e1' : '#475569';
+                const colText = this.isDark ? '#94a3b8' : '#64748b';
+
+                // Grid
+                ctx.strokeStyle = colGrid;
+                ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+
+                // Scaling: 1 meter = 1000 pixels (since scale is small, ~0.2m total width)
+                // Let's make 0.1m = 150px => 1m = 1500px
+                const scale = 1500; 
+
+                const posA = cx + physics.x_a * scale;
+                const posB = cx + physics.x_b * scale;
+                const radius = 25;
+
+                // Draw Spring (if attached/compressed)
+                if ((physics.x_b - physics.x_a) < physics.l_natural + 0.005) { // small epsilon tolerance
+                    ctx.beginPath();
+                    ctx.strokeStyle = colSpring;
+                    ctx.lineWidth = 4;
+                    const coils = 10;
+                    const startX = posA;
+                    const endX = posB;
+                    ctx.moveTo(startX, cy);
+                    for(let i=0; i<=coils; i++) {
+                        const x = startX + (endX - startX) * (i/coils);
+                        const y = cy + ((i%2===0) ? -10 : 10);
+                        if(i===0 || i===coils) ctx.lineTo(x, cy);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+
+                // Puck A
+                ctx.fillStyle = colA;
+                ctx.beginPath(); ctx.arc(posA, cy, radius, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline='middle';
+                ctx.fillText('A', posA, cy);
+
+                // Puck B
+                ctx.fillStyle = colB;
+                ctx.beginPath(); ctx.arc(posB, cy, radius, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'white'; ctx.fillText('B', posB, cy);
+            },
+
+            setupCharts: function() {
+                const commonOpts = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    elements: { point: { radius: 0 } },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { labels: { usePointStyle: true } } },
+                    scales: { x: { display: true, title: {display:true, text:'Time (s)'} } }
+                };
+
+                // 1. Velocity
+                this.charts.vt = new Chart(document.getElementById('chart-vt'), {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: 'Vel A', borderColor: '#f43f5e', borderWidth: 2 },
+                            { label: 'Vel B', borderColor: '#3b82f6', borderWidth: 2 }
+                        ]
+                    },
+                    options: { ...commonOpts, scales: { ...commonOpts.scales, y: {title: {display:true, text: 'm/s'}} } }
+                });
+
+                // 2. Momentum
+                this.charts.pt = new Chart(document.getElementById('chart-pt'), {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: 'Puck A', borderColor: '#f43f5e', borderDash: [5,5], borderWidth: 2 },
+                            { label: 'Puck B', borderColor: '#3b82f6', borderDash: [5,5], borderWidth: 2 },
+                            { label: 'Total', borderColor: '#a855f7', borderWidth: 3 }
+                        ]
+                    },
+                    options: { ...commonOpts, scales: { ...commonOpts.scales, y: {title: {display:true, text: 'kg·m/s'}} } }
+                });
+
+                // 3. Energy
+                this.charts.et = new Chart(document.getElementById('chart-et'), {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: 'Kinetic', borderColor: '#10b981', borderWidth: 2, fill: true, backgroundColor: 'rgba(16, 185, 129, 0.1)' },
+                            { label: 'Potential', borderColor: '#f59e0b', borderWidth: 2, fill: true, backgroundColor: 'rgba(245, 158, 11, 0.1)' },
+                            { label: 'Total Mech', borderColor: '#64748b', borderWidth: 2, borderDash: [2,2] }
+                        ]
+                    },
+                    options: { ...commonOpts, scales: { ...commonOpts.scales, y: {title: {display:true, text: 'Joules'}} } }
+                });
+            },
+
+            updateStaticCharts: function() {
+                const h = physics.history;
+
+                // Update Data
+                this.charts.vt.data.labels = h.t;
+                this.charts.vt.data.datasets[0].data = h.va;
+                this.charts.vt.data.datasets[1].data = h.vb;
+                this.charts.vt.update();
+
+                this.charts.pt.data.labels = h.t;
+                this.charts.pt.data.datasets[0].data = h.pa;
+                this.charts.pt.data.datasets[1].data = h.pb;
+                this.charts.pt.data.datasets[2].data = h.ptot;
+                this.charts.pt.update();
+
+                this.charts.et.data.labels = h.t;
+                this.charts.et.data.datasets[0].data = h.ke;
+                this.charts.et.data.datasets[1].data = h.pe;
+                this.charts.et.data.datasets[2].data = h.me;
+                this.charts.et.update();
+            },
+
+            updateChartTheme: function() {
+                const colGrid = this.isDark ? '#334155' : '#e2e8f0';
+                const colText = this.isDark ? '#94a3b8' : '#64748b';
+
+                Object.values(this.charts).forEach(chart => {
+                    chart.options.scales.x.grid.color = colGrid;
+                    chart.options.scales.y.grid.color = colGrid;
+                    chart.options.scales.x.ticks.color = colText;
+                    chart.options.scales.y.ticks.color = colText;
+                    chart.options.plugins.legend.labels.color = colText;
+                    chart.update();
+                });
+            },
+
+            // Animation Loop
+            play: function() {
+                if(this.isPlaying) return;
+                this.isPlaying = true;
+                const dt = 0.005; // 5ms step for playback
+
+                const loop = () => {
+                    if(!this.isPlaying) return;
+                    
+                    const data = physics.step(dt);
+                    this.drawFrame();
+                    
+                    // Update Text
+                    document.getElementById('lbl-time').textContent = physics.t.toFixed(3);
+                    
+                    // Only update text stats periodically to save DOM calls
+                    document.getElementById('out-va').textContent = physics.v_a.toFixed(3);
+                    document.getElementById('out-vb').textContent = physics.v_b.toFixed(3);
+                    document.getElementById('out-ptot').textContent = data.ptot.toFixed(4);
+                    
+                    const error = Math.abs(data.me - physics.initial_energy);
+                    document.getElementById('out-err').textContent = error.toFixed(6);
+
+                    this.animId = requestAnimationFrame(loop);
+                };
+                this.animId = requestAnimationFrame(loop);
+                
+                document.getElementById('btn-play').innerHTML = '<span>⏸</span> Pause';
+                document.getElementById('btn-play').classList.replace('bg-emerald-600', 'bg-amber-600');
+                document.getElementById('btn-play').classList.replace('hover:bg-emerald-500', 'hover:bg-amber-500');
+            },
+
+            stop: function() {
+                this.isPlaying = false;
+                cancelAnimationFrame(this.animId);
+                document.getElementById('btn-play').innerHTML = '<span>▶</span> Run Event';
+                document.getElementById('btn-play').classList.replace('bg-amber-600', 'bg-emerald-600');
+                document.getElementById('btn-play').classList.replace('hover:bg-amber-500', 'hover:bg-emerald-500');
+            },
+
+            togglePlay: function() {
+                this.isPlaying ? this.stop() : this.play();
+            },
+
+            reset: function() {
+                this.stop();
+                const dx = parseFloat(document.getElementById('in-dx').value);
+                physics.reset(dx);
+                document.getElementById('lbl-time').textContent = "0.000";
+                document.getElementById('out-va').textContent = "0.000";
+                document.getElementById('out-vb').textContent = "0.000";
+                document.getElementById('out-ptot').textContent = "0.000";
+                document.getElementById('out-err').textContent = "0.000";
+                this.drawFrame();
+            }
+        };
+
+        const sim = ui;
+        window.addEventListener('DOMContentLoaded', () => ui.init());
+
+    </script>
+</body>
+</html>
