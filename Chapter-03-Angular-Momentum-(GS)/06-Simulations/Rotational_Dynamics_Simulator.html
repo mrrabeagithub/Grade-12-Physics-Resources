@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotational Dynamics Lab - (by Rabih A.G.)</title>
+    
+    <!-- MathJax for rendering LaTeX formulas beautifully -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root { 
+            --bg: #1a1a1a; 
+            --text: #e0e0e0; 
+            --accent: #00d4ff; 
+            --danger: #ff4d4d;
+            --success: #00cc44;
+            --warning: #ffaa00;
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        .container { 
+            max-width: 900px; 
+            width: 100%; 
+            display: grid; 
+            grid-template-columns: 1fr 1.2fr; 
+            gap: 20px; 
+        }
+        canvas { 
+            background: #000; 
+            border: 1px solid #444; 
+            border-radius: 8px; 
+            width: 100%; 
+            height: auto; 
+        }
+        .controls { 
+            background: #2a2a2a; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border-left: 4px solid var(--accent); 
+        }
+        .slider-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.9em; margin-bottom: 5px; color: var(--accent); }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        
+        /* Button Styling */
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        button {
+            flex: 1;
+            padding: 12px;
+            cursor: pointer;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+        #playBtn { background: var(--success); }
+        #resetBtn { background: var(--danger); }
+
+        .formula { 
+            font-style: italic; 
+            color: #ccc; 
+            margin-top: 15px; 
+            border-top: 1px solid #444; 
+            padding-top: 15px; 
+            font-size: 0.95em; 
+        }
+        .stats { 
+            font-family: 'Courier New', monospace; 
+            font-size: 1.1em; 
+            margin-top: 10px; 
+            color: #0f0; 
+            background: #111;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin: 0 0 10px 0;">Rotational Dynamics Simulator <span style="font-size: 0.6em; color: #888;">(by Rabih A.G.)</span></h2>
+
+    <div class="container">
+        <!-- Visualization Side -->
+        <div>
+            <label>Physics Animation (60fps Local Rendering)</label>
+            <canvas id="physicsCanvas" width="400" height="400"></canvas>
+            
+            <label style="margin-top: 15px;">Angular Velocity vs Time ($\dot{\theta}$ vs $t$)</label>
+            <canvas id="graphCanvas" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Controls & Data Side -->
+        <div class="controls">
+            
+            <!-- Play/Pause & Reset Controls -->
+            <div class="btn-group">
+                <button id="playBtn" onclick="togglePlay()">START</button>
+                <button id="resetBtn" onclick="resetSim()">RESET</button>
+            </div>
+
+            <div class="slider-group">
+                <label>Applied Moment $\mathcal{M}$ (N.m): <span id="valM">1.0</span></label>
+                <input type="range" id="inputM" min="-5" max="5" step="0.1" value="1.0">
+            </div>
+
+            <div class="slider-group">
+                <label>Moment of Inertia $I$ (kg.m²): <span id="valI">2.0</span></label>
+                <input type="range" id="inputI" min="0.5" max="10" step="0.1" value="2.0">
+            </div>
+
+            <div class="slider-group">
+                <label>Friction Moment $\mathcal{M}_f$ (N.m): <span id="valMf">0.2</span></label>
+                <input type="range" id="inputMf" min="0" max="2" step="0.1" value="0.2">
+            </div>
+
+            <!-- Live Updating Stats (Using Unicode for fast 60fps rendering without stressing MathJax) -->
+            <div class="stats" id="realtimeStats">
+                θ  : 0.00 rad<br>
+                θ̇  : 0.00 rad/s<br>
+                θ̈  : 0.00 rad/s²
+            </div>
+
+            <!-- Static Formulas (Rendered beautifully by MathJax once on load) -->
+            <div class="formula">
+                <strong>Fundamental Law of Dynamics:</strong><br><br>
+                <div style="text-align: center; font-size: 1.2em;">
+                    $\sum \mathcal{M}_{/\Delta} = I \cdot \ddot{\theta}$
+                </div>
+                <br>
+                <em>Note: In the Lebanese curriculum, $\ddot{\theta}$ is the angular acceleration and $\mathcal{M}$ is the applied moment.</em>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('physicsCanvas');
+    const ctx = canvas.getContext('2d');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const gCtx = graphCanvas.getContext('2d');
+
+    // Simulation State
+    let isRunning = false;
+    let state = { theta: 0, thetaDot: 0, thetaDoubleDot: 0 };
+    let params = { M: 1.0, I: 2.0, Mf: 0.2 };
+    let dt = 0.016; // Fixed timestep for RK4 stability (~60fps)
+    let time = 0; // Track simulation time for the graph
+    let history = []; // Data points for Velocity vs Time graph
+
+    // Input Listeners
+    document.getElementById('inputM').oninput = (e) => { params.M = parseFloat(e.target.value); document.getElementById('valM').innerText = params.M.toFixed(1); };
+    document.getElementById('inputI').oninput = (e) => { params.I = parseFloat(e.target.value); document.getElementById('valI').innerText = params.I.toFixed(1); };
+    document.getElementById('inputMf').oninput = (e) => { params.Mf = parseFloat(e.target.value); document.getElementById('valMf').innerText = params.Mf.toFixed(1); };
+
+    // Play/Pause Logic
+    function togglePlay() {
+        isRunning = !isRunning;
+        const playBtn = document.getElementById('playBtn');
+        if (isRunning) {
+            playBtn.innerText = "PAUSE";
+            playBtn.style.background = "var(--warning)";
+        } else {
+            playBtn.innerText = "RESUME";
+            playBtn.style.background = "var(--success)";
+        }
+    }
+
+    // Reset Logic
+    function resetSim() {
+        state = { theta: 0, thetaDot: 0, thetaDoubleDot: 0 };
+        history = [];
+        time = 0;
+        isRunning = false;
+        
+        const playBtn = document.getElementById('playBtn');
+        playBtn.innerText = "START";
+        playBtn.style.background = "var(--success)";
+        
+        gCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+        draw(); // Force a redraw of the initial state
+    }
+
+    // Helper to calculate Net Moment considering static and kinetic friction
+    function getNetMoment(velocity) {
+        let friction = 0;
+        // Dry friction model with a deadband for static friction
+        if (Math.abs(velocity) > 0.05) {
+            // Kinetic friction opposes motion direction
+            friction = params.Mf * Math.sign(velocity);
+        } else {
+            // Static friction
+            if (Math.abs(params.M) <= params.Mf) {
+                friction = params.M; // Friction perfectly cancels applied moment (no movement)
+            } else {
+                friction = params.Mf * Math.sign(params.M); // Applied moment overcomes static friction
+            }
+        }
+        return params.M - friction;
+    }
+
+    // RK4 Numerical Integration Logic
+    function getDerivatives(s) {
+        const netMoment = getNetMoment(s.thetaDot);
+        const accel = netMoment / params.I;
+        return { dTheta: s.thetaDot, dThetaDot: accel };
+    }
+
+    function step() {
+        const k1 = getDerivatives(state);
+        
+        const k2 = getDerivatives({
+            theta: state.theta + k1.dTheta * dt/2,
+            thetaDot: state.thetaDot + k1.dThetaDot * dt/2
+        });
+
+        const k3 = getDerivatives({
+            theta: state.theta + k2.dTheta * dt/2,
+            thetaDot: state.thetaDot + k2.dThetaDot * dt/2
+        });
+
+        const k4 = getDerivatives({
+            theta: state.theta + k3.dTheta * dt,
+            thetaDot: state.thetaDot + k3.dThetaDot * dt
+        });
+
+        // Update State
+        state.theta += (dt/6) * (k1.dTheta + 2*k2.dTheta + 2*k3.dTheta + k4.dTheta);
+        state.thetaDot += (dt/6) * (k1.dThetaDot + 2*k2.dThetaDot + 2*k3.dThetaDot + k4.dThetaDot);
+        
+        // Ensure velocity drops exactly to 0 when captured by static friction to prevent jitter
+        if (Math.abs(state.thetaDot) < 0.05 && Math.abs(params.M) <= params.Mf) {
+            state.thetaDot = 0;
+        }
+
+        time += dt;
+        
+        // Calculate instantaneous acceleration for the live stats display
+        state.thetaDoubleDot = getNetMoment(state.thetaDot) / params.I;
+        
+        // Keep theta normalized for visual rotation tracking
+        state.theta = state.theta % (2 * Math.PI);
+        if (state.theta < 0) state.theta += 2 * Math.PI;
+        
+        // Push to history for the Kinematics Graph
+        history.push({ t: time, v: state.thetaDot });
+        
+        // Keep only the last 11 seconds of data to prevent memory leaks 
+        if (history.length > 0 && (time - history[0].t > 11)) {
+            history.shift();
+        }
+    }
+
+    function draw() {
+        // 1. Draw Main Physics Canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(200, 200);
+        
+        // Static Center point
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+
+        ctx.rotate(state.theta);
+
+        // Draw Rotating Disk
+        ctx.beginPath();
+        ctx.arc(0, 0, 100, 0, Math.PI * 2);
+        ctx.strokeStyle = 'var(--accent)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        
+        // Spokes for visual reference of rotation
+        ctx.beginPath();
+        ctx.moveTo(-100, 0); ctx.lineTo(100, 0);
+        ctx.moveTo(0, -100); ctx.lineTo(0, 100);
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Mass indicator (Visual only)
+        ctx.beginPath();
+        ctx.arc(80, 0, 10 + (params.I), 0, Math.PI*2);
+        ctx.fillStyle = 'var(--danger)';
+        ctx.fill();
+
+        ctx.restore();
+
+        // 2. Update Live Stats
+        document.getElementById('realtimeStats').innerHTML = `
+            θ  : ${state.theta.toFixed(2)} rad<br>
+            θ̇  : ${state.thetaDot.toFixed(2)} rad/s<br>
+            θ̈  : ${state.thetaDoubleDot.toFixed(2)} rad/s²
+        `;
+
+        // 3. Draw Kinematics Plot (Velocity vs Time)
+        // Draw darker background for better grid contrast
+        gCtx.fillStyle = "#111";
+        gCtx.fillRect(0,0, 400, 200);
+        
+        gCtx.lineWidth = 1;
+        gCtx.font = "10px Arial";
+        
+        // Define sliding window (Continuous scroll)
+        let windowSize = 10;
+        let minTime = Math.max(0, time - windowSize);
+        let maxTime = minTime + windowSize;
+        
+        // Vertical Grid Lines (Dynamic Time Axis: line every 1s)
+        let firstTick = Math.ceil(minTime);
+        for(let t = firstTick; t <= maxTime; t++) {
+            let px = ((t - minTime) / windowSize) * 400;
+            gCtx.strokeStyle = (t % 5 === 0) ? "#555" : "#333"; // Brighter line every 5s
+            gCtx.beginPath();
+            gCtx.moveTo(px, 0);
+            gCtx.lineTo(px, 200);
+            gCtx.stroke();
+            
+            // X-Axis Labels
+            gCtx.fillStyle = "#aaa";
+            gCtx.fillText(t + "s", px + 4, 195);
+        }
+        
+        // Horizontal Grid Lines (Velocity Axis: Center is 100px. 10 rad/s = 100px. Line every 2 rad/s = 20px)
+        for(let v = -10; v <= 10; v += 2) {
+            let py = 100 - (v * 10);
+            gCtx.strokeStyle = (v === 0) ? "#888" : ((v % 10 === 0) ? "#555" : "#333");
+            gCtx.beginPath();
+            gCtx.moveTo(0, py);
+            gCtx.lineTo(400, py);
+            gCtx.stroke();
+            
+            // Y-Axis Labels
+            if (v !== 0) {
+                gCtx.fillStyle = "#aaa";
+                gCtx.fillText(v, 4, py - 4);
+            }
+        }
+        
+        // Draw Thicker Zero Velocity Axis
+        gCtx.strokeStyle = "#fff";
+        gCtx.lineWidth = 1.5;
+        gCtx.beginPath();
+        gCtx.moveTo(0, 100);
+        gCtx.lineTo(400, 100);
+        gCtx.stroke();
+        gCtx.fillStyle = "#fff";
+        gCtx.fillText("0", 4, 96);
+        
+        // Plot the actual data
+        if (history.length > 1) {
+            gCtx.beginPath();
+            gCtx.strokeStyle = "var(--success)";
+            gCtx.lineWidth = 2.5; // Thicker line so it stands out from the grid
+            
+            let isFirstPoint = true;
+
+            history.forEach((p) => {
+                if (p.t < minTime) return; // Only draw points in the current 10s window
+                
+                // Map Time to X-axis (0 to 400px over the dynamic 10s window)
+                let px = ((p.t - minTime) / windowSize) * 400; 
+                
+                // Map Velocity to Y-axis. Center is 100. Scale so 10 rad/s = 100px.
+                let py = 100 - (p.v * 10); 
+                
+                // Keep drawing within canvas bounds
+                py = Math.max(0, Math.min(200, py));
+                
+                if(isFirstPoint) {
+                    gCtx.moveTo(px, py);
+                    isFirstPoint = false;
+                } else {
+                    gCtx.lineTo(px, py);
+                }
+            });
+            gCtx.stroke();
+        }
+    }
+
+    function loop() {
+        if (isRunning) {
+            step();
+        }
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // Initialize first frame
+    draw();
+    loop();
+</script>
+</body>
+</html>

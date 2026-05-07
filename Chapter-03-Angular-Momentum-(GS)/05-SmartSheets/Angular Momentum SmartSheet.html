@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 3: Angular Momentum (Smart-Sheet)</title>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+    :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f6f7; --card: #ffffff; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: #333; line-height: 1.6; margin: 0; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    
+    /* Login Screen */
+    #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    #login-screen input { padding: 10px; margin: 10px; width: 250px; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }
+    #login-screen button { padding: 10px 30px; background: var(--accent); color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; transition: 0.3s; }
+    #login-screen button:hover { background: #2980b9; }
+    #error-msg { color: #e74c3c; margin-top: 10px; display: none; }
+
+    /* Main Worksheet */
+    #worksheet { display: none; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--primary); padding-bottom: 20px; }
+    .student-info { font-weight: bold; color: var(--primary); display: flex; justify-content: space-between; margin-bottom: 20px; background: #e8f6f3; padding: 10px; border-radius: 4px;}
+
+    /* Question Cards */
+    .question-card { background: var(--card); padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--accent); position: relative; }
+    .q-badge { position: absolute; top: 10px; right: 10px; background: #ecf0f1; padding: 3px 8px; border-radius: 4px; font-size: 12px; color: #7f8c8d; }
+    .input-group { margin-top: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .input-group input[type="number"], .input-group input[type="text"] { padding: 8px; border: 1px solid #bdc3c7; border-radius: 4px; width: 120px; }
+    .radio-group label { display: block; margin: 5px 0; cursor: pointer; }
+    
+    /* Hints */
+    .hint-btn { background: none; border: none; color: #f39c12; cursor: pointer; font-size: 0.9em; text-decoration: underline; margin-top: 5px; }
+    .hint-text { display: none; margin-top: 5px; color: #7f8c8d; font-style: italic; background: #fef9e7; padding: 8px; border-radius: 4px; font-size: 0.9em; }
+
+    /* Decomposed Steps */
+    .sub-step { margin-left: 20px; padding: 10px; border-left: 2px solid #ddd; margin-top: 10px; background: #fdfdfd; }
+    .step-label { font-weight: 600; font-size: 0.9em; color: #555; display: block; margin-bottom: 5px;}
+
+    /* Action Bar */
+    .action-bar { display: flex; justify-content: space-between; margin-top: 30px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+    .submit-btn { background: #27ae60; color: white; border: none; padding: 12px 30px; font-size: 18px; border-radius: 4px; cursor: pointer; }
+    .print-btn { background: #95a5a6; color: white; border: none; padding: 12px 30px; font-size: 18px; border-radius: 4px; cursor: pointer; }
+    
+    @media print {
+        #login-screen, .action-bar, .hint-btn { display: none; }
+        #worksheet { display: block !important; }
+        .question-card { break-inside: avoid; border: 1px solid #eee; box-shadow: none; }
+        body { background: white; }
+    }
+</style>
+</head>
+<body>
+
+<script>
+    const CONFIG = {
+        grade: "Grade 12 GS",
+        url: "https://script.google.com/macros/s/AKfycbyj6r-9cG_h5GG9aFonm0sT8QeFZFnmjXmRiH0B8ZU2T5l8clPVRNrSJtPD68qf-dhYnw/exec",
+        topic: "Chapter 3: Angular Momentum",
+        students: {
+            "احمد / محمود / مشحاوي": "7799", 
+            "هادي / عمر / ابراهيم": "8963"
+        }
+    };
+</script>
+
+<div id="login-screen">
+    <h2>🔐 Class Login</h2>
+    <p>Please enter your access code.</p>
+    <input type="password" id="access-code" placeholder="Enter Code">
+    <button onclick="attemptLogin()">Enter Worksheet</button>
+    <div id="error-msg">Invalid Code. Please try again.</div>
+</div>
+
+<div id="worksheet" class="container">
+    <div class="header">
+        <h1>Physics Quiz: Angular Momentum</h1>
+        <p>Topic: Definitions, Conservation, and Systems</p>
+    </div>
+    
+    <div class="student-info">
+        <span id="display-name">Student Name</span>
+        <span>Grade 12 GS</span>
+    </div>
+
+    <form id="quiz-form">
+        
+        <h3>Part I: Concepts & Calculation</h3>
+
+        <div class="question-card">
+            <span class="q-badge">Concept: σ, f, T</span>
+            <p><strong>1.</strong> A solid disk with Moment of Inertia \( I = 2.5 ~kg\cdot m^2 \) rotates with a constant angular velocity \( \theta' = 4\pi ~rad/s \).</p>
+            
+            <div class="sub-step">
+                <span class="step-label">a) Calculate the Angular Momentum \( \sigma \):</span>
+                <div class="input-group">
+                    <input type="number" name="q1a" step="0.1" placeholder="Answer"> \( kg\cdot m^2/s \)
+                    <small style="color:#7f8c8d">(Use π ≈ 3.14)</small>
+                </div>
+            </div>
+
+            <div class="sub-step">
+                <span class="step-label">b) Find the Frequency \( f \):</span>
+                <div class="input-group">
+                    <input type="number" name="q1b" step="0.1" placeholder="Answer"> \( Hz \)
+                </div>
+            </div>
+
+            <div class="sub-step">
+                <span class="step-label">c) Deduce the Period \( T \) for one rotation:</span>
+                <div class="input-group">
+                    <input type="number" name="q1c" step="0.1" placeholder="Answer"> \( s \)
+                </div>
+            </div>
+
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">
+                Formulas:<br> 
+                \( \sigma = I \cdot \theta' \)<br>
+                \( \theta' = 2\pi f \)<br>
+                \( T = 1/f \)
+            </div>
+        </div>
+
+        <div class="question-card">
+            <span class="q-badge">Concept: M (Torque)</span>
+            <p><strong>2.</strong> A force \( F = 20 ~N \) is applied tangentially to the rim of a wheel with radius \( r = 0.5 ~m \).</p>
+            <p>Calculate the Moment of Force (Torque) \( M \).</p>
+            <div class="input-group">
+                <input type="number" name="q2" step="0.1" placeholder="Answer"> \( N\cdot m \)
+            </div>
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">For a tangential force, Torque depends on Force and Radius: \( M = F \times r \).</div>
+        </div>
+
+        <div class="question-card">
+            <span class="q-badge">Theory</span>
+            <p><strong>3.</strong> The Theorem of Angular Momentum relates the rate of change of angular momentum (\( d\sigma/dt \)) to which physical quantity?</p>
+            <div class="radio-group">
+                <label><input type="radio" name="q3" value="A"> A) Net External Force</label>
+                <label><input type="radio" name="q3" value="B"> B) Moment of Inertia</label>
+                <label><input type="radio" name="q3" value="C"> C) Net External Moment (Torque)</label>
+                <label><input type="radio" name="q3" value="D"> D) Angular Acceleration</label>
+            </div>
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">Analogy: Newton's 2nd Law states Force changes linear momentum. What changes angular momentum?</div>
+        </div>
+
+        <h3>Part II: Conservation Principles</h3>
+
+        <div class="question-card">
+            <span class="q-badge">Internal Change of I</span>
+            <p><strong>4.</strong> An ice skater spins with \( I_1 = 6 ~kg\cdot m^2 \) at \( \theta'_1 = 3 ~rad/s \). She pulls her arms in, reducing her inertia to \( I_2 = 2 ~kg\cdot m^2 \).</p>
+            
+            <div class="sub-step">
+                <p><strong>Step A:</strong> What is her initial angular momentum \( \sigma_{initial} \)?</p>
+                <input type="number" name="q4a" placeholder="Initial σ">  \( kg\cdot m^2/s \)
+            </div>
+
+            <div class="sub-step">
+                <p><strong>Step B:</strong> Using conservation, calculate her new angular velocity \( \theta'_2 \).</p>
+                <input type="number" name="q4b" placeholder="Final ω"> \( rad/s \)
+            </div>
+
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">Angular momentum is conserved. \( I_1\theta'_1 = I_2\theta'_2 \).</div>
+        </div>
+
+        <div class="question-card">
+            <span class="q-badge">System at Rest</span>
+            <p><strong>5.</strong> A disk and a man are initially at rest. The man starts walking, gaining angular momentum \( \sigma_{man} = +12 ~kg\cdot m^2/s \).</p>
+            <p>What is the angular momentum of the disk \( \sigma_{disk} \)?</p>
+            <div class="radio-group">
+                <label><input type="radio" name="q5" value="A"> +12 kg·m²/s</label>
+                <label><input type="radio" name="q5" value="B"> 0 kg·m²/s</label>
+                <label><input type="radio" name="q5" value="C"> -12 kg·m²/s</label>
+                <label><input type="radio" name="q5" value="D"> Cannot be determined</label>
+            </div>
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">Start at rest means \( \sigma_{total} = 0 \). So \( \sigma_{man} + \sigma_{disk} = 0 \).</div>
+        </div>
+
+        <div class="question-card">
+            <span class="q-badge">Variable Analysis</span>
+            <p><strong>6.</strong> A particle rotates at radius \( R \) with velocity \( \theta'_1 \). The string is pulled until the new radius is \( r = R/3 \).</p>
+            <p>Given that \( I = mR^2 \), how does the new velocity \( \theta'_2 \) compare to \( \theta'_1 \)?</p>
+            <div class="radio-group">
+                <label><input type="radio" name="q6" value="A"> \( \theta'_2 = 3\theta'_1 \)</label>
+                <label><input type="radio" name="q6" value="B"> \( \theta'_2 = 9\theta'_1 \)</label>
+                <label><input type="radio" name="q6" value="C"> \( \theta'_2 = \theta'_1 / 3 \)</label>
+                <label><input type="radio" name="q6" value="D"> \( \theta'_2 = \theta'_1 / 9 \)</label>
+            </div>
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">If R becomes R/3, then I becomes I/9. Since \( \sigma \) is constant, if I decreases by factor 9, \( \theta' \) must increase by factor 9.</div>
+        </div>
+
+        <h3>Part III: Systems & Impulse</h3>
+
+        <div class="question-card">
+            <span class="q-badge">Inelastic Collision</span>
+            <p><strong>7.</strong> Disk A (\( I_A = 4 ~kg\cdot m^2 \)) rotates at \( 10 ~rad/s \). Disk B (\( I_B = 6 ~kg\cdot m^2 \)) is dropped onto it (initially at rest). They stick together.</p>
+            
+            <div class="sub-step">
+                 <span class="step-label">a) Calculate the total initial angular momentum \( \sigma_{system} \):</span>
+                 <input type="number" name="q7a" placeholder="Total σ"> \( kg\cdot m^2/s \)
+            </div>
+
+            <div class="sub-step">
+                <span class="step-label">b) Calculate the combined Moment of Inertia \( I_{combined} \):</span>
+                <input type="number" name="q7b" placeholder="Total I"> \( kg\cdot m^2 \)
+           </div>
+
+           <div class="sub-step">
+                <span class="step-label">c) Deduce the final common angular velocity \( \theta'_{final} \):</span>
+                <input type="number" name="q7c" placeholder="Final ω"> \( rad/s \)
+           </div>
+
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">Total angular momentum is conserved. \( \sigma_i = \sigma_f \). <br> \( \sigma_f = I_{combined} \cdot \theta'_f \).</div>
+        </div>
+
+        <div class="question-card">
+            <span class="q-badge">Impulse Theorem</span>
+            <p><strong>8.</strong> A solid flywheel with Moment of Inertia \( I = 3 ~kg\cdot m^2 \) starts from rest. A constant external torque \( M = 15 ~N\cdot m \) is applied for \( \Delta t = 4 ~s \).</p>
+            
+            <div class="sub-step">
+                <span class="step-label">a) Calculate the final angular momentum \( \sigma_f \):</span>
+                <input type="number" name="q8a" placeholder="Final σ"> \( kg\cdot m^2/s \)
+            </div>
+
+            <div class="sub-step">
+                <span class="step-label">b) Calculate the final angular velocity \( \theta'_f \):</span>
+                <input type="number" name="q8b" placeholder="Final ω"> \( rad/s \)
+            </div>
+
+            <button type="button" class="hint-btn" onclick="toggleHint(this)">Show Hint</button>
+            <div class="hint-text">
+                1) Theorem: \( \Delta \sigma = M_{ext} \times \Delta t \).<br>
+                2) Definition: \( \sigma = I \cdot \theta' \).
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button type="button" class="print-btn" onclick="window.print()">Print Worksheet</button>
+            <button type="button" class="submit-btn" onclick="submitQuiz()">Submit Answers</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // --- AUTHENTICATION ---
+    let currentUser = "";
+
+    function attemptLogin() {
+        const code = document.getElementById('access-code').value.trim();
+        const error = document.getElementById('error-msg');
+        
+        // Find student by code
+        const studentName = Object.keys(CONFIG.students).find(key => CONFIG.students[key] === code);
+
+        if (studentName) {
+            currentUser = studentName;
+            document.getElementById('display-name').textContent = "Student: " + studentName.split('/')[0]; // First name only for display
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('worksheet').style.display = 'block';
+        } else {
+            error.style.display = 'block';
+        }
+    }
+
+    // --- INTERACTION ---
+    function toggleHint(btn) {
+        const hintDiv = btn.nextElementSibling;
+        if (hintDiv.style.display === "block") {
+            hintDiv.style.display = "none";
+            btn.textContent = "Show Hint";
+        } else {
+            hintDiv.style.display = "block";
+            btn.textContent = "Hide Hint";
+        }
+    }
+
+    // --- GRADING & SUBMISSION ---
+    function submitQuiz() {
+        if(!confirm("Are you sure you want to submit?")) return;
+
+        const form = document.getElementById('quiz-form');
+        const formData = new FormData(form);
+        let answersString = "";
+        let score = 0;
+        let total = 8; // Normalized total for grading scale
+
+        // --- Q1 Grading ---
+        // 1a: Sigma = 2.5 * 4pi ~= 31.42 (Allow range 31.3 - 31.5)
+        let q1a = parseFloat(formData.get('q1a'));
+        let q1b = parseFloat(formData.get('q1b'));
+        let q1c = parseFloat(formData.get('q1c'));
+        let q1_correct = 0;
+
+        if(q1a >= 31.3 && q1a <= 31.5) q1_correct++;
+        if(q1b == 2) q1_correct++;
+        if(q1c == 0.5) q1_correct++;
+        
+        if(q1_correct == 3) score++; // All parts must be correct for full point
+        answersString += `Q1:[${q1a},${q1b},${q1c}] `;
+
+        // --- Q2 Grading ---
+        // 20 * 0.5 = 10
+        if(formData.get('q2') == 10) score++;
+        answersString += `Q2:${formData.get('q2')} `;
+
+        // --- Q3 Grading ---
+        if(formData.get('q3') === 'C') score++;
+        answersString += `Q3:${formData.get('q3')} `;
+
+        // --- Q4 Grading ---
+        // A=18, B=9
+        if(formData.get('q4a') == 18 && formData.get('q4b') == 9) score++;
+        answersString += `Q4:[${formData.get('q4a')},${formData.get('q4b')}] `;
+
+        // --- Q5 Grading ---
+        if(formData.get('q5') === 'C') score++;
+        answersString += `Q5:${formData.get('q5')} `;
+
+        // --- Q6 Grading ---
+        // B (9 times)
+        if(formData.get('q6') === 'B') score++;
+        answersString += `Q6:${formData.get('q6')} `;
+
+        // --- Q7 Grading ---
+        // a: 40, b: 10, c: 4
+        let q7a = parseFloat(formData.get('q7a'));
+        let q7b = parseFloat(formData.get('q7b'));
+        let q7c = parseFloat(formData.get('q7c'));
+        
+        if(q7a == 40 && q7b == 10 && q7c == 4) score++;
+        answersString += `Q7:[${q7a},${q7b},${q7c}] `;
+
+        // --- Q8 Grading ---
+        // a: 15*4 = 60
+        // b: 60/3 = 20
+        let q8a = parseFloat(formData.get('q8a'));
+        let q8b = parseFloat(formData.get('q8b'));
+        
+        if(q8a == 60 && q8b == 20) score++;
+        answersString += `Q8:[${q8a},${q8b}] `;
+
+        const finalScore = Math.round((score / total) * 100);
+
+        // Payload for Google Script
+        const payload = {
+            name: currentUser,
+            score: finalScore,
+            topic: CONFIG.topic,
+            answers: answersString
+        };
+
+        const btn = document.querySelector('.submit-btn');
+        btn.disabled = true;
+        btn.textContent = "Submitting...";
+
+        fetch(CONFIG.url, {
+            method: "POST",
+            mode: "no-cors", 
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            alert(`Submitted! Your Score: ${finalScore}%`);
+            btn.textContent = "Submitted";
+        }).catch(err => {
+            console.error(err);
+            alert("Error submitting. Please check connection.");
+            btn.disabled = false;
+        });
+    }
+</script>
+
+</body>
+</html>
