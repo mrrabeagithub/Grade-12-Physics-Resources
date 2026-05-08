@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RLC Series AC Circuit (By Rabih A.G.)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], processEscapes: true },
+            svg: { fontCache: 'global' },
+            startup: {
+                pageReady: () => {
+                    return MathJax.startup.defaultPageReady().then(() => {
+                        window.mathJaxLoaded = true;
+                        if (typeof renderMath === 'function') renderMath();
+                    });
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { slate: { 850: '#151e2e', 900: '#0f172a' } } } }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .glass-panel { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .dark .glass-panel { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .state-transition { transition: all 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-slate-900 dark:text-gray-100 transition-colors duration-300 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-850 shadow-md p-4 flex justify-between items-center z-10 shrink-0">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400">RLC Series Resonance</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">Grade 12 GS Physics Simulator (By Rabih A.G.)</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Play/Pause Toggle -->
+            <button id="play-toggle" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
+                <svg id="icon-pause" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <svg id="icon-play" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span id="play-text">Pause</span>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none" aria-label="Toggle Dark Mode">
+                <svg id="theme-toggle-light-icon" class="w-7 h-7 hidden" fill="#FFD700" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 1.32a1 1 0 011.415 0l.708.707a1 1 0 01-1.414 1.414l-.708-.707a1 1 0 010-1.414zM16 10a1 1 0 011 1h1a1 1 0 110-2h-1a1 1 0 01-1 1zm-1.32 4.22a1 1 0 010 1.415l-.707.708a1 1 0 01-1.414-1.414l.707-.708a1 1 0 011.414 0zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-4.22-1.32a1 1 0 01-1.415 0l-.708-.707a1 1 0 011.414-1.414l.708.707a1 1 0 010 1.414zM4 10a1 1 0 01-1-1H2a1 1 0 110 2h1a1 1 0 011-1zm1.32-4.22a1 1 0 010-1.415l.707-.708a1 1 0 011.414 1.414l-.707.708a1 1 0 01-1.414 0zM10 4a6 6 0 100 12 6 6 0 000-12z" clip-rule="evenodd" fill-rule="evenodd"></path></svg>
+                <svg id="theme-toggle-dark-icon" class="w-7 h-7 hidden" fill="#C0C0C0" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Sidebar: Controls & Theory -->
+        <aside class="w-full lg:w-1/3 bg-white dark:bg-slate-850 shadow-inner p-6 overflow-y-auto flex flex-col gap-6 shrink-0 z-0 border-r border-gray-200 dark:border-gray-800">
+            
+            <!-- Dynamic State Indicator -->
+            <section id="circuit-state-panel" class="p-4 rounded-xl shadow-sm text-center state-transition border-2">
+                <h2 class="text-sm uppercase tracking-widest font-bold opacity-80 mb-1">Circuit Nature</h2>
+                <div id="state-title" class="text-2xl font-black tracking-tight mb-2">RESISTIVE</div>
+                <div id="state-desc" class="text-sm font-medium">Resonance: $f = f_0$</div>
+            </section>
+
+            <section class="glass-panel p-4 rounded-xl shadow-sm flex-1">
+                <h2 class="text-lg font-bold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Parameters</h2>
+                
+                <div class="space-y-6">
+                    <!-- Generator Voltage -->
+                    <div>
+                        <label class="flex justify-between text-sm font-medium mb-1">
+                            <span class="text-red-500">Generator $U_m$</span>
+                            <span id="val-um" class="font-mono">10.0 V</span>
+                        </label>
+                        <input type="range" id="slider-um" min="1" max="20" step="0.5" value="10" class="w-full accent-red-500">
+                    </div>
+                    
+                    <!-- Frequency -->
+                    <div>
+                        <label class="flex justify-between text-sm font-medium mb-1">
+                            <span class="text-blue-500">Frequency $f$</span>
+                            <span id="val-f" class="font-mono font-bold">50 Hz</span>
+                        </label>
+                        <input type="range" id="slider-f" min="10" max="200" step="1" value="50" class="w-full accent-blue-500">
+                    </div>
+
+                    <!-- Resistor -->
+                    <div>
+                        <label class="flex justify-between text-sm font-medium mb-1">
+                            <span class="text-green-500">Total Resistance $R$</span>
+                            <span id="val-r" class="font-mono">50 &Omega;</span>
+                        </label>
+                        <input type="range" id="slider-r" min="10" max="200" step="5" value="50" class="w-full accent-green-500">
+                    </div>
+
+                    <!-- Inductor -->
+                    <div>
+                        <label class="flex justify-between text-sm font-medium mb-1">
+                            <span class="text-purple-500">Inductance $L$</span>
+                            <span id="val-l" class="font-mono">100 mH</span>
+                        </label>
+                        <input type="range" id="slider-l" min="10" max="500" step="10" value="100" class="w-full accent-purple-500">
+                    </div>
+
+                    <!-- Capacitor -->
+                    <div>
+                        <label class="flex justify-between text-sm font-medium mb-1">
+                            <span class="text-orange-500">Capacitance $C$</span>
+                            <span id="val-c" class="font-mono">100 &mu;F</span>
+                        </label>
+                        <input type="range" id="slider-c" min="10" max="200" step="5" value="100" class="w-full accent-orange-500">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Theory Section -->
+            <section class="glass-panel p-4 rounded-xl shadow-sm">
+                <h2 class="text-sm font-bold mb-2 border-b border-gray-200 dark:border-gray-700 pb-1">Mathematical Model</h2>
+                <div class="text-xs text-gray-600 dark:text-gray-300 space-y-2" id="theory-container">
+                    <p>Reference: $i(t) = I_m \sin(\omega t)$</p>
+                    <p>$$Z = \sqrt{R^2 + \left(L\omega - \frac{1}{C\omega}\right)^2}$$</p>
+                    <p>$$I_m = \frac{U_m}{Z} \quad , \quad \tan(\phi) = \frac{L\omega - \frac{1}{C\omega}}{R}$$</p>
+                    <p>Resonance occurs when $L\omega = \frac{1}{C\omega}$, giving $Z = R$ and $I_m = \frac{U_m}{R}$.</p>
+                </div>
+            </section>
+
+        </aside>
+
+        <!-- Right Main: The Visualization Trinity -->
+        <main class="flex-1 p-6 overflow-y-auto bg-gray-100 dark:bg-slate-900 flex flex-col gap-6">
+            
+            <!-- Metrics Readout -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
+                <div class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Resonance Freq. ($f_0$)</span>
+                    <span class="text-xl font-bold font-mono mt-1" id="display-f0">0.0 Hz</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Current ($I_m$)</span>
+                    <span class="text-xl font-bold font-mono text-blue-500 mt-1" id="display-im">0.00 A</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Phase Shift ($\phi_u - \phi_i$)</span>
+                    <span class="text-xl font-bold font-mono text-indigo-500 mt-1" id="display-phi">0.00 rad</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Impedance ($Z$)</span>
+                    <span class="text-xl font-bold font-mono text-green-500 mt-1" id="display-z">0.0 &Omega;</span>
+                </div>
+            </div>
+
+            <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[600px]">
+                
+                <!-- 1. Time Domain Graph (Oscilloscope) -->
+                <div class="glass-panel rounded-xl shadow-sm flex flex-col lg:col-span-2 relative h-80 bg-[#f8fafc] dark:bg-[#0f172a]">
+                    <div class="p-3 border-b border-gray-200 dark:border-gray-700 shrink-0 flex justify-between items-center z-10">
+                        <h3 class="text-sm font-bold flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            Oscilloscope
+                        </h3>
+                        <div class="flex items-center gap-4 text-xs font-mono">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="toggle-ur" checked class="accent-green-500"><div class="w-3 h-1 bg-green-500"></div> $u_R$</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="toggle-ul" class="accent-purple-500"><div class="w-3 h-1 bg-purple-500"></div> $u_L$</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="toggle-uc" class="accent-orange-500"><div class="w-3 h-1 bg-orange-500"></div> $u_C$</label>
+                            <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                            <div class="flex items-center gap-1"><div class="w-3 h-1 bg-red-500"></div> $u_{Total}$</div>
+                            <div class="flex items-center gap-1"><div class="w-3 h-1 bg-blue-500"></div> $i(t)$</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative w-full h-full overflow-hidden rounded-b-xl" id="container-time">
+                        <canvas id="canvas-time" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- 2. Fresnel Phasor Diagram -->
+                <div class="glass-panel rounded-xl shadow-sm flex flex-col relative h-80 bg-[#f8fafc] dark:bg-[#0f172a]">
+                    <div class="p-3 border-b border-gray-200 dark:border-gray-700 shrink-0 z-10">
+                        <h3 class="text-sm font-bold flex items-center gap-2">
+                            <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Fresnel (Phasor) Diagram
+                        </h3>
+                    </div>
+                    <div class="flex-1 relative w-full h-full overflow-hidden rounded-b-xl" id="container-phasor">
+                        <canvas id="canvas-phasor" class="absolute inset-0 w-full h-full"></canvas>
+                        <div class="absolute bottom-2 left-2 text-[10px] text-gray-500 dark:text-gray-400 max-w-[80%]">
+                            Reference: $\vec{I}$ (Current). $\vec{U} = \vec{U}_R + \vec{U}_L + \vec{U}_C$
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Resonance Curve -->
+                <div class="glass-panel rounded-xl shadow-sm flex flex-col relative h-80 bg-[#f8fafc] dark:bg-[#0f172a]">
+                    <div class="p-3 border-b border-gray-200 dark:border-gray-700 shrink-0 z-10">
+                        <h3 class="text-sm font-bold flex items-center gap-2">
+                            <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            Resonance Curve ($I_m$ vs $f$)
+                        </h3>
+                    </div>
+                    <div class="flex-1 relative w-full h-full overflow-hidden rounded-b-xl" id="container-resonance">
+                        <canvas id="canvas-resonance" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        window.mathJaxLoaded = false;
+        
+        // --- THEME & PLAY MANAGEMENT ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        const playToggleBtn = document.getElementById('play-toggle');
+        const iconPlay = document.getElementById('icon-play');
+        const iconPause = document.getElementById('icon-pause');
+        const playText = document.getElementById('play-text');
+
+        function updateThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                darkIcon.classList.remove('hidden');
+                lightIcon.classList.add('hidden');
+            } else {
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+            }
+        }
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        updateThemeIcons();
+
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            updateThemeIcons();
+        });
+
+        playToggleBtn.addEventListener('click', () => {
+            simulation_active = !simulation_active;
+            if (simulation_active) {
+                iconPlay.classList.add('hidden');
+                iconPause.classList.remove('hidden');
+                playText.textContent = "Pause";
+            } else {
+                iconPause.classList.add('hidden');
+                iconPlay.classList.remove('hidden');
+                playText.textContent = "Play";
+            }
+        });
+
+        function renderMath() {
+            if (window.mathJaxLoaded && window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([document.getElementById('theory-container'), document.getElementById('circuit-state-panel')]).catch(e => console.error(e));
+            }
+        }
+
+        // --- PHYSICS ENGINE PARAMETERS (RLC Steady State) ---
+        let simulation_active = true;
+        let global_simulation_time = 0;
+        
+        // Circuit variables
+        let generator_voltage_amplitude = 10; // U_m
+        let oscillation_frequency_hz = 50; // f
+        let resistance_ohms = 50; // R
+        let inductance_henrys = 100 * 1e-3; // L
+        let capacitance_farads = 100 * 1e-6; // C
+        
+        // Computed steady-state properties
+        let angular_frequency_omega = 0;
+        let resonance_frequency_hz = 0;
+        let impedance_z = 0;
+        let maximum_current_amplitude = 0; // I_m
+        let phase_shift_phi_rad = 0; // Phase of U relative to I
+        
+        // Sub-component voltage amplitudes
+        let um_R = 0;
+        let um_L = 0;
+        let um_C = 0;
+
+        // Visual Graph Limits
+        let graph_max_voltage = 20; 
+        let graph_max_current = 2;
+
+        // UI Checkboxes
+        const toggleUR = document.getElementById('toggle-ur');
+        const toggleUL = document.getElementById('toggle-ul');
+        const toggleUC = document.getElementById('toggle-uc');
+
+        // --- DOM ELEMENTS ---
+        const displays = {
+            f0: document.getElementById('display-f0'),
+            im: document.getElementById('display-im'),
+            phi: document.getElementById('display-phi'),
+            z: document.getElementById('display-z'),
+            statePanel: document.getElementById('circuit-state-panel'),
+            stateTitle: document.getElementById('state-title'),
+            stateDesc: document.getElementById('state-desc')
+        };
+
+        function bindSlider(id, valId, variableSetter, scale = 1, unit = '') {
+            const slider = document.getElementById(id);
+            const valSpan = document.getElementById(valId);
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                valSpan.innerHTML = `${val} ${unit}`;
+                variableSetter(val * scale);
+                updatePhysics();
+            });
+        }
+
+        bindSlider('slider-um', 'val-um', v => generator_voltage_amplitude = v, 1, 'V');
+        bindSlider('slider-f', 'val-f', v => oscillation_frequency_hz = v, 1, 'Hz');
+        bindSlider('slider-r', 'val-r', v => resistance_ohms = v, 1, '&Omega;');
+        bindSlider('slider-l', 'val-l', v => inductance_henrys = v, 1e-3, 'mH');
+        bindSlider('slider-c', 'val-c', v => capacitance_farads = v, 1e-6, '&mu;F');
+
+        // --- PHYSICS CALCULATION ---
+        function updatePhysics() {
+            angular_frequency_omega = 2 * Math.PI * oscillation_frequency_hz;
+            resonance_frequency_hz = 1 / (2 * Math.PI * Math.sqrt(inductance_henrys * capacitance_farads));
+            
+            let X_L = inductance_henrys * angular_frequency_omega;
+            let X_C = 1 / (capacitance_farads * angular_frequency_omega);
+            
+            impedance_z = Math.sqrt(Math.pow(resistance_ohms, 2) + Math.pow(X_L - X_C, 2));
+            maximum_current_amplitude = generator_voltage_amplitude / impedance_z;
+            
+            phase_shift_phi_rad = Math.atan2(X_L - X_C, resistance_ohms); // U leads I by phi
+
+            um_R = resistance_ohms * maximum_current_amplitude;
+            um_L = X_L * maximum_current_amplitude;
+            um_C = X_C * maximum_current_amplitude;
+
+            // Update UI Metrics
+            displays.f0.textContent = resonance_frequency_hz.toFixed(1) + " Hz";
+            displays.im.textContent = maximum_current_amplitude.toFixed(2) + " A";
+            displays.z.innerHTML = impedance_z.toFixed(1) + " &Omega;";
+
+            let deg = (phase_shift_phi_rad * 180 / Math.PI).toFixed(0);
+            let radStr = phase_shift_phi_rad > 0 ? `+${phase_shift_phi_rad.toFixed(2)}` : phase_shift_phi_rad.toFixed(2);
+            if (Math.abs(phase_shift_phi_rad) < 0.01) radStr = "0.00";
+            displays.phi.innerHTML = `${radStr} rad <span class="text-xs font-normal text-gray-400">(${deg}&deg;)</span>`;
+
+            // Update State Indicator Pedagogically
+            displays.statePanel.className = "p-4 rounded-xl shadow-sm text-center state-transition border-2";
+            
+            const tol = 0.05; // 5% tolerance for "Resonance" visual snapping
+            if (Math.abs(oscillation_frequency_hz - resonance_frequency_hz) / resonance_frequency_hz < tol) {
+                displays.stateTitle.textContent = "RESISTIVE (RESONANCE)";
+                displays.stateDesc.innerHTML = "$f \\approx f_0 \\implies \\phi \\approx 0$";
+                displays.statePanel.classList.add("bg-green-100", "border-green-400", "dark:bg-green-900/30", "dark:border-green-600", "text-green-800", "dark:text-green-300");
+            } 
+            else if (oscillation_frequency_hz > resonance_frequency_hz) {
+                displays.stateTitle.textContent = "INDUCTIVE STATE";
+                displays.stateDesc.innerHTML = "$f > f_0 \\implies L\\omega > \\frac{1}{C\\omega} \\implies \\phi > 0$";
+                displays.statePanel.classList.add("bg-purple-100", "border-purple-400", "dark:bg-purple-900/30", "dark:border-purple-600", "text-purple-800", "dark:text-purple-300");
+            } 
+            else {
+                displays.stateTitle.textContent = "CAPACITIVE STATE";
+                displays.stateDesc.innerHTML = "$f < f_0 \\implies \\frac{1}{C\\omega} > L\\omega \\implies \\phi < 0$";
+                displays.statePanel.classList.add("bg-orange-100", "border-orange-400", "dark:bg-orange-900/30", "dark:border-orange-600", "text-orange-800", "dark:text-orange-300");
+            }
+            renderMath(); // Re-render small math snippets
+
+            // Update Graph Scaling logic to keep waves inside bounds
+            // Max current is when Z=R -> I = U/R
+            graph_max_current = Math.max(generator_voltage_amplitude / resistance_ohms * 1.2, 0.5);
+            // Voltage could spike across L or C at resonance Q-factor.
+            let max_sub_u = Math.max(um_R, um_L, um_C, generator_voltage_amplitude);
+            graph_max_voltage = Math.max(max_sub_u * 1.2, 5);
+        }
+
+        // --- RENDERING PIPELINE ---
+        const canvasTime = document.getElementById('canvas-time');
+        const ctxTime = canvasTime.getContext('2d');
+        const canvasPhasor = document.getElementById('canvas-phasor');
+        const ctxPhasor = canvasPhasor.getContext('2d');
+        const canvasResonance = document.getElementById('canvas-resonance');
+        const ctxResonance = canvasResonance.getContext('2d');
+
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            [ 
+                {cvs: canvasTime, ctx: ctxTime}, 
+                {cvs: canvasPhasor, ctx: ctxPhasor},
+                {cvs: canvasResonance, ctx: ctxResonance}
+            ].forEach(obj => {
+                if (!obj.cvs || !obj.cvs.parentElement) return;
+                const rect = obj.cvs.parentElement.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) return; 
+
+                obj.cvs.width = rect.width * dpr;
+                obj.cvs.height = rect.height * dpr;
+                obj.ctx.setTransform(1, 0, 0, 1, 0, 0); 
+                obj.ctx.scale(dpr, dpr);
+            });
+        }
+
+        const resizeObserver = new ResizeObserver(() => requestAnimationFrame(resizeCanvas));
+        resizeObserver.observe(document.getElementById('container-time'));
+        resizeObserver.observe(document.getElementById('container-phasor'));
+        resizeObserver.observe(document.getElementById('container-resonance'));
+
+        function drawGraticule(ctx, width, height, axisColor, gridColor, xDivs=10, yDivs=8) {
+            ctx.beginPath();
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 1;
+            for(let i=0; i<=xDivs; i++) { let x = (width/xDivs) * i; ctx.moveTo(x, 0); ctx.lineTo(x, height); }
+            for(let i=0; i<=yDivs; i++) { let y = (height/yDivs) * i; ctx.moveTo(0, y); ctx.lineTo(width, y); }
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.strokeStyle = axisColor;
+            ctx.lineWidth = 2;
+            ctx.moveTo(0, height/2); ctx.lineTo(width, height/2);
+            ctx.stroke();
+        }
+
+        // OSCILLOSCOPE (Analytical drawing for clean steady state)
+        function drawTimeDomain() {
+            const width = canvasTime.width / (window.devicePixelRatio || 1);
+            const height = canvasTime.height / (window.devicePixelRatio || 1);
+            ctxTime.clearRect(0, 0, width, height);
+            if (width === 0 || height === 0) return;
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+            const axisColor = isDark ? '#475569' : '#94a3b8';
+
+            drawGraticule(ctxTime, width, height, axisColor, gridColor, 20, 8);
+
+            // Time scaling: Show 2 full periods of the current frequency
+            const period = 1 / oscillation_frequency_hz;
+            const timeSpan = 2 * period;
+            
+            // To animate, we shift the window of time we are viewing
+            const tMin = global_simulation_time;
+            const tMax = tMin + timeSpan;
+
+            const midY = height / 2;
+            const mapX = (t) => ((t - tMin) / timeSpan) * width;
+            const mapI = (i) => midY - (i / graph_max_current) * (height * 0.4);
+            const mapU = (u) => midY - (u / graph_max_voltage) * (height * 0.4);
+
+            function plotWave(amplitude, phaseOffset, mapFunc, color, lineWidth) {
+                ctxTime.beginPath();
+                ctxTime.strokeStyle = color;
+                ctxTime.lineWidth = lineWidth;
+                ctxTime.lineJoin = 'round';
+                const points = 200;
+                for (let j = 0; j <= points; j++) {
+                    let t = tMin + (j / points) * timeSpan;
+                    let val = amplitude * Math.sin(angular_frequency_omega * t + phaseOffset);
+                    let x = mapX(t);
+                    let y = mapFunc(val);
+                    if (j === 0) ctxTime.moveTo(x, y);
+                    else ctxTime.lineTo(x, y);
+                }
+                ctxTime.stroke();
+            }
+
+            // Reference: i(t) = Im sin(wt)
+            plotWave(maximum_current_amplitude, 0, mapI, '#3b82f6', 3); // Blue
+
+            // Total Voltage: u(t) = Um sin(wt + phi)
+            plotWave(generator_voltage_amplitude, phase_shift_phi_rad, mapU, '#ef4444', 3); // Red
+
+            // Sub-components
+            if (toggleUR.checked) plotWave(um_R, 0, mapU, '#22c55e', 1.5); // Green (in phase)
+            if (toggleUL.checked) plotWave(um_L, Math.PI/2, mapU, '#a855f7', 1.5); // Purple (leads by 90)
+            if (toggleUC.checked) plotWave(um_C, -Math.PI/2, mapU, '#f97316', 1.5); // Orange (lags by 90)
+
+            // Scale labels
+            ctxTime.fillStyle = isDark ? '#94a3b8' : '#64748b';
+            ctxTime.font = '10px monospace';
+            ctxTime.fillText(`+${graph_max_current.toFixed(1)}A`, 5, midY - (height * 0.4) - 5);
+            ctxTime.fillText(`+${graph_max_voltage.toFixed(0)}V`, width - 35, midY - (height * 0.4) - 5);
+        }
+
+        // FRESNEL DIAGRAM
+        function drawPhasorDiagram() {
+            const width = canvasPhasor.width / (window.devicePixelRatio || 1);
+            const height = canvasPhasor.height / (window.devicePixelRatio || 1);
+            ctxPhasor.clearRect(0, 0, width, height);
+            if (width === 0 || height === 0) return;
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const axisColor = isDark ? '#475569' : '#94a3b8';
+            const textColor = isDark ? '#cbd5e1' : '#475569';
+
+            const cx = width / 2;
+            const cy = height / 2;
+            const maxRadius = Math.min(width, height) * 0.4;
+
+            // Draw Cartesian Axes
+            ctxPhasor.beginPath();
+            ctxPhasor.strokeStyle = axisColor;
+            ctxPhasor.lineWidth = 1;
+            ctxPhasor.moveTo(cx, 0); ctxPhasor.lineTo(cx, height);
+            ctxPhasor.moveTo(0, cy); ctxPhasor.lineTo(width, cy);
+            ctxPhasor.stroke();
+
+            // Rotation state (Current is reference)
+            const wt = angular_frequency_omega * global_simulation_time;
+            
+            // Map amplitudes to pixel lengths
+            const mapLen = (u) => (u / graph_max_voltage) * maxRadius;
+            
+            function drawVector(x0, y0, length, angle, color, label, isDashed=false) {
+                if (length < 1) return {x: x0, y: y0}; // Ignore near-zero vectors
+                
+                // Canvas Y is down, so negate angle for standard CCW math rotation
+                const rad = -angle; 
+                const x1 = x0 + length * Math.cos(rad);
+                const y1 = y0 + length * Math.sin(rad);
+                
+                ctxPhasor.beginPath();
+                ctxPhasor.strokeStyle = color;
+                ctxPhasor.lineWidth = 2;
+                if(isDashed) ctxPhasor.setLineDash([4, 4]);
+                ctxPhasor.moveTo(x0, y0);
+                ctxPhasor.lineTo(x1, y1);
+                
+                // Arrowhead
+                const headlen = 8;
+                ctxPhasor.lineTo(x1 - headlen * Math.cos(rad - Math.PI / 6), y1 - headlen * Math.sin(rad - Math.PI / 6));
+                ctxPhasor.moveTo(x1, y1);
+                ctxPhasor.lineTo(x1 - headlen * Math.cos(rad + Math.PI / 6), y1 - headlen * Math.sin(rad + Math.PI / 6));
+                ctxPhasor.stroke();
+                ctxPhasor.setLineDash([]); // reset
+
+                // Label
+                ctxPhasor.fillStyle = textColor;
+                ctxPhasor.font = '12px sans-serif';
+                ctxPhasor.fillText(label, x1 + 8 * Math.cos(rad), y1 + 8 * Math.sin(rad));
+                
+                return {x: x1, y: y1};
+            }
+
+            // Draw rotating phasors originating from center
+            // 1. Current (Reference)
+            drawVector(cx, cy, maxRadius * 0.8, wt, '#3b82f6', 'I');
+            
+            // 2. Voltages (originating from center for classic Fresnel view)
+            drawVector(cx, cy, mapLen(um_R), wt, '#22c55e', 'UR');
+            drawVector(cx, cy, mapLen(um_L), wt + Math.PI/2, '#a855f7', 'UL');
+            drawVector(cx, cy, mapLen(um_C), wt - Math.PI/2, '#f97316', 'UC');
+            
+            // Total Voltage U
+            drawVector(cx, cy, mapLen(generator_voltage_amplitude), wt + phase_shift_phi_rad, '#ef4444', 'U');
+
+            // Draw dashed tip-to-tail addition to show geometrically why U = UR + UL + UC
+            // UR -> UL -> UC
+            const tipR = {
+                x: cx + mapLen(um_R) * Math.cos(-wt),
+                y: cy + mapLen(um_R) * Math.sin(-wt)
+            };
+            const tipRL = drawVector(tipR.x, tipR.y, mapLen(um_L), wt + Math.PI/2, '#a855f7', '', true); // Dashed UL
+            drawVector(tipRL.x, tipRL.y, mapLen(um_C), wt - Math.PI/2, '#f97316', '', true); // Dashed UC (should land exactly on tip of U)
+        }
+
+        // RESONANCE CURVE (Im vs Frequency)
+        function drawResonanceCurve() {
+            const width = canvasResonance.width / (window.devicePixelRatio || 1);
+            const height = canvasResonance.height / (window.devicePixelRatio || 1);
+            ctxResonance.clearRect(0, 0, width, height);
+            if (width === 0 || height === 0) return;
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+            const axisColor = isDark ? '#475569' : '#94a3b8';
+
+            // Define plot bounds dynamically based on f0
+            const fMin = 0;
+            const fMax = Math.max(200, resonance_frequency_hz * 2.5); // Ensure curve is centeredish
+            const iMax = (generator_voltage_amplitude / resistance_ohms) * 1.1; // Max possible current
+
+            // Map functions
+            const mapF = (f) => (f / fMax) * width;
+            const mapI = (i) => height - (i / iMax) * height;
+
+            // Grid
+            ctxResonance.beginPath();
+            ctxResonance.strokeStyle = gridColor;
+            for(let i=1; i<=10; i++) {
+                let x = mapF((fMax/10) * i);
+                ctxResonance.moveTo(x, 0); ctxResonance.lineTo(x, height);
+            }
+            ctxResonance.stroke();
+
+            // Draw the theoretical resonance curve bell
+            ctxResonance.beginPath();
+            ctxResonance.strokeStyle = '#f59e0b'; // Amber
+            ctxResonance.lineWidth = 3;
+            ctxResonance.lineJoin = 'round';
+            for (let x = 0; x <= width; x += 2) {
+                let f = (x / width) * fMax;
+                if (f === 0) continue; // Avoid div by zero
+                let w = 2 * Math.PI * f;
+                let z = Math.sqrt(Math.pow(resistance_ohms, 2) + Math.pow(inductance_henrys*w - 1/(capacitance_farads*w), 2));
+                let im = generator_voltage_amplitude / z;
+                let y = mapI(im);
+                if (x === 0) ctxResonance.moveTo(x, y);
+                else ctxResonance.lineTo(x, y);
+            }
+            ctxResonance.stroke();
+
+            // Draw Resonance Frequency marker line (f0)
+            const x0 = mapF(resonance_frequency_hz);
+            ctxResonance.beginPath();
+            ctxResonance.strokeStyle = isDark ? '#64748b' : '#94a3b8';
+            ctxResonance.setLineDash([5, 5]);
+            ctxResonance.moveTo(x0, 0); ctxResonance.lineTo(x0, height);
+            ctxResonance.stroke();
+            ctxResonance.setLineDash([]);
+            
+            // Label f0
+            ctxResonance.fillStyle = isDark ? '#94a3b8' : '#64748b';
+            ctxResonance.font = '10px sans-serif';
+            ctxResonance.fillText('f0', x0 + 4, 15);
+
+            // Draw current state dot
+            const currX = mapF(oscillation_frequency_hz);
+            const currY = mapI(maximum_current_amplitude);
+            
+            // Draw drop line for current state
+            ctxResonance.beginPath();
+            ctxResonance.strokeStyle = '#3b82f6'; // Blue line
+            ctxResonance.moveTo(currX, height);
+            ctxResonance.lineTo(currX, currY);
+            ctxResonance.stroke();
+
+            // Dot
+            ctxResonance.beginPath();
+            ctxResonance.arc(currX, currY, 5, 0, 2*Math.PI);
+            ctxResonance.fillStyle = '#3b82f6';
+            ctxResonance.fill();
+            ctxResonance.strokeStyle = '#fff';
+            ctxResonance.lineWidth = 1.5;
+            ctxResonance.stroke();
+            
+            // Current f label
+            ctxResonance.fillStyle = '#3b82f6';
+            ctxResonance.fillText('f', currX - 10, height - 5);
+        }
+
+        // --- MAIN ANIMATION LOOP ---
+        function animate() {
+            if (simulation_active) {
+                // To keep rotation speed reasonable visually regardless of the actual frequency 
+                // (e.g., 50Hz would be a blur in real-time), we scale simulation time arbitrarily 
+                // so the waves smoothly travel across the screen.
+                const visual_speed_factor = 0.005; 
+                global_simulation_time += visual_speed_factor;
+
+                drawTimeDomain();
+                drawPhasorDiagram();
+                drawResonanceCurve();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // Boot
+        updatePhysics();
+        setTimeout(() => {
+            resizeCanvas();
+            animate();
+        }, 150);
+
+    </script>
+</body>
+</html>
