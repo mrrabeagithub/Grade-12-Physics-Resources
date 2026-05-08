@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnetic Flux Visualizer & Theory | Physics Engine</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for Graphs (Replacing Matplotlib) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Smooth transitions */
+        body, .panel, canvas { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+        
+        /* Slider Styling */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; border-radius: 2px; }
+        
+        /* Theme Specifics */
+        .dark input[type=range]::-webkit-slider-runnable-track { background: #475569; }
+        .dark input[type=range]::-webkit-slider-thumb { background: #38bdf8; }
+        .light input[type=range]::-webkit-slider-runnable-track { background: #cbd5e1; }
+        .light input[type=range]::-webkit-slider-thumb { background: #0284c7; }
+    </style>
+
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+</head>
+<body class="dark bg-slate-900 text-slate-200 min-h-screen flex flex-col font-sans">
+
+    <!-- Navbar -->
+    <nav class="w-full p-4 border-b border-slate-700/50 flex justify-between items-center bg-opacity-50 backdrop-blur-md sticky top-0 z-50 panel">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-magnet text-sky-500 text-2xl"></i>
+            <div class="flex flex-col">
+                <h1 class="text-xl font-bold tracking-tight leading-none">Physics<span class="text-sky-500">Lab</span> <span class="text-sm font-normal opacity-70">| Magnetic Flux $\Phi$</span></h1>
+                <span class="text-xs text-sky-400 font-mono mt-1">By Rabih A.G.</span>
+            </div>
+        </div>
+        <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-700/50 transition-colors focus:outline-none ring-offset-2 focus:ring-2 ring-sky-500">
+            <span id="theme-icon-container" class="text-xl"></span>
+        </button>
+    </nav>
+
+    <main class="flex-grow p-6 flex flex-col items-center gap-8">
+        
+        <!-- SECTION 1: SIMULATION & CONTROLS -->
+        <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Controls -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="panel bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                    <h2 class="text-lg font-bold mb-4 text-sky-400 border-b border-slate-700 pb-2">System Parameters</h2>
+                    
+                    <!-- Sliders -->
+                    <div class="mb-5">
+                        <div class="flex justify-between text-sm font-medium mb-1">
+                            <span>Magnetic Field ($B$)</span>
+                            <span id="val-B" class="font-mono text-sky-400">1.0 T</span>
+                        </div>
+                        <input type="range" id="input-B" min="0" max="5.0" step="0.1" value="1.0">
+                    </div>
+
+                    <div class="mb-5">
+                        <div class="flex justify-between text-sm font-medium mb-1">
+                            <span>Loop Area ($S$)</span>
+                            <span id="val-S" class="font-mono text-sky-400">1.0 m²</span>
+                        </div>
+                        <input type="range" id="input-S" min="0.2" max="2.0" step="0.1" value="1.0">
+                    </div>
+
+                    <div class="mb-5">
+                        <div class="flex justify-between text-sm font-medium mb-1">
+                            <span>Angle ($\theta$)</span>
+                            <span id="val-theta" class="font-mono text-sky-400">0°</span>
+                        </div>
+                        <input type="range" id="input-theta" min="0" max="360" step="1" value="0">
+                        <div class="text-xs text-gray-500 mt-1 flex justify-between">
+                            <span>Parallel ($0^\circ$)</span>
+                            <span>Perpendicular ($90^\circ$)</span>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <div class="mt-6 bg-slate-900/50 p-4 rounded border border-slate-700/50 panel-inner">
+                        <div class="text-center text-lg mb-2">$$ \Phi = B \cdot S \cdot \cos(\theta) $$</div>
+                        <div class="flex justify-between items-end border-t border-slate-700/50 pt-3">
+                            <span class="text-sm opacity-70">Instantaneous Flux:</span>
+                            <span id="result-flux" class="text-2xl font-bold font-mono transition-colors">1.00 Wb</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guide -->
+                <div class="panel bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg text-sm space-y-2 opacity-80">
+                    <h3 class="font-bold text-sky-400">Lab Guide</h3>
+                    <ul class="list-disc pl-4 space-y-2">
+                        <li class="flex items-start gap-2">
+                            <span class="text-sky-400 mt-1"><i class="fa-solid fa-arrow-right-long"></i></span>
+                            <span><strong>Blue Arrows:</strong> Magnetic Field ($\vec{B}$).</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-rose-400 mt-1"><i class="fa-solid fa-arrow-up-long"></i></span>
+                            <span><strong>Red Arrow:</strong> Normal Vector ($\vec{n}$), $\perp$ to loop.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-400 mt-1"><i class="fa-regular fa-circle"></i></span>
+                            <span><strong>Green Loop:</strong> Conductive Area ($S$).</span>
+                        </li>
+                        <li class="border-t border-slate-600 pt-2 mt-1">
+                            Flux vanishes when $\vec{n} \perp \vec{B}$ ($90^\circ$).
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Canvas -->
+            <div class="lg:col-span-8">
+                <div class="panel bg-slate-900 rounded-xl border border-slate-700 shadow-lg p-1 relative overflow-hidden flex justify-center items-center h-full min-h-[500px]">
+                    <canvas id="simCanvas" width="800" height="500"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: THEORETICAL ANALYSIS (Based on your Python Code) -->
+        <div class="max-w-7xl w-full">
+            <h2 class="text-2xl font-bold mb-6 text-sky-400 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line"></i> Theoretical Analysis
+            </h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Main Graph: Flux vs Angle -->
+                <div class="panel bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg lg:col-span-2">
+                    <div class="h-80 w-full relative">
+                        <canvas id="chartFluxAngle"></canvas>
+                    </div>
+                    <div class="text-center text-xs opacity-60 mt-2 italic">Figure 1: Flux variation over full rotation ($\Phi = BS \cos \theta$)</div>
+                </div>
+
+                <!-- Dependence Graph: Flux vs B -->
+                <div class="panel bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+                    <div class="h-64 w-full relative">
+                        <canvas id="chartFluxB"></canvas>
+                    </div>
+                    <div class="text-center text-xs opacity-60 mt-2 italic">Figure 2: Linear dependence on Field Strength (at $\theta=0$)</div>
+                </div>
+
+                <!-- Dependence Graph: Flux vs Area -->
+                <div class="panel bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+                    <div class="h-64 w-full relative">
+                        <canvas id="chartFluxS"></canvas>
+                    </div>
+                    <div class="text-center text-xs opacity-60 mt-2 italic">Figure 3: Linear dependence on Area (at $\theta=0$)</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+<script>
+    /**
+     * PHYSICS LAB ENGINE v2
+     * Integrated Visualizer + Theoretical Plotting
+     */
+
+    // --- CONFIG ---
+    const THEMES = {
+        dark: {
+            bg: '#0f172a', panel: '#1e293b', text: '#e2e8f0',
+            field: '#38bdf8', loop: '#34d399', normal: '#f43f5e',
+            chartLine: '#38bdf8', grid: '#334155'
+        },
+        light: {
+            bg: '#f8fafc', panel: '#ffffff', text: '#1e293b',
+            field: '#0284c7', loop: '#059669', normal: '#dc2626',
+            chartLine: '#2563eb', grid: '#e2e8f0'
+        }
+    };
+
+    let currentTheme = 'dark';
+    const state = { B: 1.0, S: 1.0, thetaDeg: 0, thetaRad: 0, flux: 0 };
+    
+    // Canvas & UI Refs
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const ui = {
+        B: document.getElementById('input-B'),
+        S: document.getElementById('input-S'),
+        theta: document.getElementById('input-theta'),
+        valB: document.getElementById('val-B'),
+        valS: document.getElementById('val-S'),
+        valTheta: document.getElementById('val-theta'),
+        result: document.getElementById('result-flux'),
+        toggleBtn: document.getElementById('theme-toggle'),
+        toggleIcon: document.getElementById('theme-icon-container')
+    };
+
+    // Chart Instances
+    let chartFluxAngle, chartFluxB, chartFluxS;
+
+    // --- INIT ---
+    function init() {
+        ui.B.addEventListener('input', updatePhysics);
+        ui.S.addEventListener('input', updatePhysics);
+        ui.theta.addEventListener('input', updatePhysics);
+        ui.toggleBtn.addEventListener('click', toggleTheme);
+
+        renderMathInElement(document.body, {
+            delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}]
+        });
+
+        initCharts();
+        updatePhysics();
+        updateThemeUI();
+        animate();
+    }
+
+    // --- PHYSICS & LOGIC ---
+    function updatePhysics() {
+        state.B = parseFloat(ui.B.value);
+        state.S = parseFloat(ui.S.value);
+        state.thetaDeg = parseFloat(ui.theta.value);
+        state.thetaRad = state.thetaDeg * (Math.PI / 180);
+        state.flux = state.B * state.S * Math.cos(state.thetaRad);
+
+        // UI Text
+        ui.valB.innerText = state.B.toFixed(1) + " T";
+        ui.valS.innerText = state.S.toFixed(1) + " m²";
+        ui.valTheta.innerText = state.thetaDeg + "°";
+        ui.result.innerText = state.flux.toFixed(2) + " Wb";
+        
+        // Result Color
+        const themeColors = THEMES[currentTheme];
+        ui.result.style.color = state.flux >= 0 ? themeColors.loop : themeColors.normal;
+
+        updateCharts();
+    }
+
+    // --- THEME ---
+    function toggleTheme() {
+        currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        const body = document.body;
+        
+        if (currentTheme === 'dark') {
+            body.classList.remove('light'); body.classList.add('dark');
+            body.classList.replace('bg-slate-50', 'bg-slate-900');
+            body.classList.replace('text-slate-900', 'text-slate-200');
+        } else {
+            body.classList.remove('dark'); body.classList.add('light');
+            body.classList.replace('bg-slate-900', 'bg-slate-50');
+            body.classList.replace('text-slate-200', 'text-slate-900');
+        }
+
+        const panels = document.querySelectorAll('.panel');
+        panels.forEach(p => {
+            if (currentTheme === 'dark') {
+                p.classList.replace('bg-white', 'bg-slate-800');
+                p.classList.replace('border-slate-200', 'border-slate-700');
+            } else {
+                p.classList.replace('bg-slate-800', 'bg-white');
+                p.classList.replace('border-slate-700', 'border-slate-200');
+            }
+        });
+        
+        updateThemeUI();
+        updateChartTheme();
+    }
+
+    function updateThemeUI() {
+        ui.toggleIcon.innerHTML = currentTheme === 'dark' 
+            ? '<i class="fa-solid fa-sun text-yellow-400"></i>' 
+            : '<i class="fa-solid fa-moon text-gray-400"></i>';
+        updatePhysics(); 
+    }
+
+    // --- CHART.JS SETUP (Replicating Python Plots) ---
+    function initCharts() {
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        const colors = THEMES[currentTheme];
+
+        // 1. Flux vs Angle Chart (Cosine Wave)
+        const ctxAngle = document.getElementById('chartFluxAngle').getContext('2d');
+        chartFluxAngle = new Chart(ctxAngle, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 361}, (_, i) => i), // 0 to 360
+                datasets: [
+                    {
+                        label: 'Theoretical Flux (Φ = BS cos θ)',
+                        data: [], // Filled in updateCharts
+                        borderColor: colors.chartLine,
+                        borderWidth: 2,
+                        fill: true,
+                        backgroundColor: (context) => {
+                            const ctx = context.chart.ctx;
+                            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                            gradient.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+                            gradient.addColorStop(1, 'rgba(56, 189, 248, 0)');
+                            return gradient;
+                        },
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Current State',
+                        data: [],
+                        pointRadius: 8,
+                        pointBackgroundColor: colors.normal,
+                        pointBorderColor: '#fff',
+                        showLine: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: {display: true, text: 'Angle θ (degrees)'}, grid: {color: colors.grid} },
+                    y: { title: {display: true, text: 'Flux Φ (Wb)'}, grid: {color: colors.grid} }
+                },
+                plugins: { legend: {labels: {color: colors.text}} }
+            }
+        });
+
+        // 2. Flux vs B (Linear)
+        const ctxB = document.getElementById('chartFluxB').getContext('2d');
+        chartFluxB = new Chart(ctxB, {
+            type: 'line',
+            data: {
+                labels: [0, 1, 2, 3, 4, 5],
+                datasets: [{
+                    label: 'Flux vs Field (S fixed)',
+                    data: [],
+                    borderColor: '#34d399', // Emerald
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: {display: true, text: 'B (Tesla)'}, grid: {color: colors.grid} },
+                    y: { title: {display: true, text: 'Flux (Wb)'}, grid: {color: colors.grid} }
+                }
+            }
+        });
+
+        // 3. Flux vs S (Linear)
+        const ctxS = document.getElementById('chartFluxS').getContext('2d');
+        chartFluxS = new Chart(ctxS, {
+            type: 'line',
+            data: {
+                labels: [0, 0.5, 1.0, 1.5, 2.0],
+                datasets: [{
+                    label: 'Flux vs Area (B fixed)',
+                    data: [],
+                    borderColor: '#f472b6', // Pink
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: {display: true, text: 'S (m²)'}, grid: {color: colors.grid} },
+                    y: { title: {display: true, text: 'Flux (Wb)'}, grid: {color: colors.grid} }
+                }
+            }
+        });
+    }
+
+    function updateCharts() {
+        if(!chartFluxAngle) return;
+
+        // 1. Update Flux vs Angle (The Cosine Wave)
+        // Amplitude = B * S
+        const maxFlux = state.B * state.S;
+        const waveData = [];
+        for(let i=0; i<=360; i+=5) { // Step 5 for performance
+            waveData.push({x: i, y: maxFlux * Math.cos(i * Math.PI/180)});
+        }
+        
+        chartFluxAngle.data.datasets[0].data = waveData;
+        
+        // Current Point Marker
+        chartFluxAngle.data.datasets[1].data = [{x: state.thetaDeg, y: state.flux}];
+        chartFluxAngle.update('none'); // 'none' for smooth animation
+
+        // 2. Update Flux vs B (Linear) - Slope is S (assuming theta=0 for max effect)
+        // Python code: flux_b = B_vals * S_fixed
+        // Here we use current S from slider
+        const slopeB = state.S; 
+        chartFluxB.data.datasets[0].data = [0, 1, 2, 3, 4, 5].map(b => b * slopeB);
+        chartFluxB.options.scales.y.suggestedMax = 10;
+        chartFluxB.update();
+
+        // 3. Update Flux vs S (Linear) - Slope is B
+        const slopeS = state.B;
+        chartFluxS.data.datasets[0].data = [0, 0.5, 1.0, 1.5, 2.0].map(s => s * slopeS);
+        chartFluxS.options.scales.y.suggestedMax = 10;
+        chartFluxS.update();
+    }
+
+    function updateChartTheme() {
+        const c = THEMES[currentTheme];
+        const charts = [chartFluxAngle, chartFluxB, chartFluxS];
+        
+        charts.forEach(chart => {
+            if(!chart) return;
+            chart.options.scales.x.grid.color = c.grid;
+            chart.options.scales.y.grid.color = c.grid;
+            chart.options.scales.x.ticks = { color: c.text };
+            chart.options.scales.y.ticks = { color: c.text };
+            chart.options.plugins.legend.labels.color = c.text;
+            
+            // Specific dataset colors
+            if (chart === chartFluxAngle) {
+                chart.data.datasets[0].borderColor = c.chartLine;
+            }
+            chart.update();
+        });
+    }
+
+    // --- CANVAS RENDERER ---
+    function drawArrow(ctx, fromX, fromY, toX, toY, color, width = 2) {
+        const headlen = 10;
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const angle = Math.atan2(dy, dx);
+        ctx.strokeStyle = color; ctx.lineWidth = width;
+        ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY); ctx.stroke();
+        ctx.fillStyle = color; ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI/6), toY - headlen * Math.sin(angle - Math.PI/6));
+        ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI/6), toY - headlen * Math.sin(angle + Math.PI/6));
+        ctx.fill();
+    }
+
+    function animate() {
+        const colors = THEMES[currentTheme];
+        ctx.fillStyle = colors.panel; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Draw Field
+        if (state.B > 0) {
+            const spacing = 150 / (state.B + 0.1); 
+            const numLines = Math.floor(canvas.height / spacing) + 4;
+            const centerY = canvas.height / 2;
+            ctx.save(); ctx.globalAlpha = 0.3;
+            for (let i = -numLines/2; i < numLines/2; i++) {
+                const y = centerY + i * spacing;
+                drawArrow(ctx, 20, y, canvas.width - 20, y, colors.field, 1);
+            }
+            ctx.restore();
+        }
+
+        // 2. Geometry
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const baseRadius = 120;
+        const radius = baseRadius * Math.sqrt(state.S);
+        const visualAngle = state.thetaRad;
+        const nLen = 120;
+        const nX = centerX + nLen * Math.cos(visualAngle);
+        const nY = centerY - nLen * Math.sin(visualAngle); // Y inverted
+        
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(-visualAngle); // Rotate frame to align X with Normal
+        
+        // Perpendicular Marker
+        ctx.beginPath();
+        const markSize = 15;
+        ctx.moveTo(markSize, 0); ctx.lineTo(markSize, -markSize); ctx.lineTo(0, -markSize);
+        ctx.strokeStyle = colors.text; ctx.lineWidth = 1; ctx.stroke();
+
+        // Loop (Ellipse side view)
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 8, radius, 0, 0, 2 * Math.PI); 
+        ctx.fillStyle = colors.loop; ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 8, radius, 0, 0, 2 * Math.PI);
+        ctx.strokeStyle = colors.text; ctx.lineWidth = 2; ctx.stroke();
+        
+        // Wires
+        ctx.beginPath();
+        ctx.moveTo(0, radius); ctx.lineTo(-60, radius + 20);
+        ctx.moveTo(0, -radius); ctx.lineTo(-60, -radius - 20);
+        ctx.strokeStyle = colors.text; ctx.lineWidth = 1; ctx.stroke();
+
+        ctx.restore();
+
+        // 3. Normal Vector (Absolute Coords)
+        drawArrow(ctx, centerX, centerY, nX, nY, colors.normal, 4);
+        ctx.fillStyle = colors.normal; ctx.font = "bold 18px monospace";
+        ctx.fillText("n", nX + 15, nY);
+
+        // 4. Angle Arc
+        if (Math.abs(state.thetaDeg) > 2) {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 50, 0, -visualAngle, state.thetaDeg > 0);
+            ctx.strokeStyle = currentTheme === 'dark' ? '#facc15' : '#ca8a04';
+            ctx.lineWidth = 2; ctx.stroke();
+            const midAngle = -visualAngle / 2;
+            const labelR = 70;
+            ctx.fillStyle = currentTheme === 'dark' ? '#facc15' : '#ca8a04';
+            ctx.font = "14px monospace";
+            ctx.fillText("θ", centerX + labelR * Math.cos(midAngle), centerY + labelR * Math.sin(midAngle));
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>

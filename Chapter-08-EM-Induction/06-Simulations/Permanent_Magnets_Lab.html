@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permanent Magnets Explorer | Physics Lab</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        canvas { cursor: crosshair; touch-action: none; }
+        .panel { background-color: #1e293b; border: 1px solid #334155; }
+        .btn-toggle { transition: all 0.2s; }
+        .btn-toggle.active { background-color: #0ea5e9; color: white; border-color: #0284c7; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="w-full p-4 border-b border-slate-700 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-500 text-white w-8 h-8 flex items-center justify-center font-bold rounded shadow-lg shadow-red-500/20">N</div>
+                <div class="flex flex-col">
+                    <h1 class="text-xl font-bold tracking-tight leading-none">Physics<span class="text-sky-500">Lab</span> <span class="text-sm font-normal opacity-70">| Permanent Magnets</span></h1>
+                    <span class="text-xs text-sky-400 font-mono mt-1">By Rabih A.G.</span>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="sim.reset()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded border border-slate-600 transition">
+                    <i class="fa-solid fa-rotate-right"></i> Reset
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Controls Sidebar -->
+        <div class="lg:col-span-3 space-y-6">
+            
+            <!-- Intro Card -->
+            <div class="panel p-5 rounded-xl shadow-lg">
+                <h2 class="text-lg font-bold text-sky-400 mb-2">Concept Guide</h2>
+                <p class="text-sm text-slate-400 mb-3 leading-relaxed">
+                    Permanent magnets create invisible force fields. Magnetic field lines always emerge from the <strong class="text-rose-400">North Pole</strong> and loop into the <strong class="text-blue-400">South Pole</strong>.
+                </p>
+                <div class="text-xs bg-slate-900/50 p-3 rounded border border-slate-700/50 space-y-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-right-long text-sky-500"></i>
+                        <span>Lines indicate direction ($\vec{B}$)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-up-down-left-right text-emerald-500"></i>
+                        <span>Density indicates Strength ($|\vec{B}|$)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experiment Controls -->
+            <div class="panel p-5 rounded-xl shadow-lg">
+                <h2 class="text-lg font-bold text-sky-400 mb-4">Lab Settings</h2>
+                
+                <!-- Mode Selection -->
+                <div class="space-y-3 mb-6">
+                    <label class="text-xs font-bold uppercase text-slate-500 tracking-wider">Experiment Mode</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="sim.setMode('single')" id="btn-single" class="btn-toggle active px-3 py-2 rounded text-sm font-medium border border-slate-600 bg-slate-800">
+                            Single Magnet
+                        </button>
+                        <button onclick="sim.setMode('dual')" id="btn-dual" class="btn-toggle px-3 py-2 rounded text-sm font-medium border border-slate-600 bg-slate-800">
+                            Interaction
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vis Options -->
+                <div class="space-y-4">
+                    <label class="text-xs font-bold uppercase text-slate-500 tracking-wider">Visualization</label>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Field Lines</span>
+                        <input type="checkbox" id="chk-lines" checked onchange="sim.toggleLines()" class="w-4 h-4 accent-sky-500 cursor-pointer">
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Compass Grid</span>
+                        <input type="checkbox" id="chk-compass" onchange="sim.toggleCompass()" class="w-4 h-4 accent-sky-500 cursor-pointer">
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-700/50">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>Magnet Strength</span>
+                            <span id="val-strength" class="font-mono text-sky-400">100%</span>
+                        </div>
+                        <input type="range" id="strength-slider" min="10" max="200" value="100" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-xs text-slate-500 opacity-60">
+                Tip: Drag to move, <strong>Double-Click</strong> to flip!
+            </div>
+        </div>
+
+        <!-- Simulation Area -->
+        <div class="lg:col-span-9 flex flex-col h-full min-h-[500px]">
+            <div class="panel flex-grow rounded-xl shadow-xl relative overflow-hidden group">
+                <canvas id="simCanvas" class="w-full h-full block"></canvas>
+                <div class="absolute bottom-4 right-4 text-xs font-mono text-slate-500 pointer-events-none">
+                    $$ \vec{B}_{net} = \sum \vec{B}_i $$
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+<script>
+    /**
+     * PERMANENT MAGNET SIMULATOR ENGINE
+     * Uses a Monopole approximation model for performant 2D field rendering.
+     */
+
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Physics Constants
+    const MAGNET_WIDTH = 120;
+    const MAGNET_HEIGHT = 40;
+    
+    class Magnet {
+        constructor(x, y, angle = 0) {
+            this.x = x;
+            this.y = y;
+            this.angle = angle; // Radians
+            this.width = MAGNET_WIDTH;
+            this.height = MAGNET_HEIGHT;
+            this.dragging = false;
+        }
+
+        getPolePositions() {
+            // Returns positions of N and S 'monopoles' for calculation
+            const halfLen = this.width * 0.4; // Slightly inside the physical rect
+            const cos = Math.cos(this.angle);
+            const sin = Math.sin(this.angle);
+            
+            return {
+                N: { x: this.x + halfLen * cos, y: this.y + halfLen * sin },
+                S: { x: this.x - halfLen * cos, y: this.y - halfLen * sin }
+            };
+        }
+
+        contains(mx, my) {
+            return Math.abs(mx - this.x) < this.width/2 && Math.abs(my - this.y) < this.height/2;
+        }
+    }
+
+    const sim = {
+        magnets: [],
+        mode: 'single', 
+        showLines: true,
+        showCompass: false,
+        strength: 100,
+        width: 0,
+        height: 0,
+        
+        // Input State
+        mouseX: 0,
+        mouseY: 0,
+        isMouseInside: false,
+        
+        init() {
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            
+            // Interaction
+            canvas.addEventListener('mousedown', this.handleInputStart.bind(this));
+            canvas.addEventListener('mousemove', this.handleInputMove.bind(this));
+            canvas.addEventListener('mouseup', this.handleInputEnd.bind(this));
+            canvas.addEventListener('mouseleave', () => {
+                this.handleInputEnd();
+                this.isMouseInside = false;
+            });
+            canvas.addEventListener('mouseenter', () => this.isMouseInside = true);
+            
+            // Magnet Flip
+            canvas.addEventListener('dblclick', this.handleFlip.bind(this));
+
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); this.isMouseInside = true; this.handleInputStart(e.touches[0]); });
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); this.handleInputMove(e.touches[0]); });
+            canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.handleInputEnd(); this.isMouseInside = false; });
+
+            // Slider
+            document.getElementById('strength-slider').addEventListener('input', (e) => {
+                this.strength = parseInt(e.target.value);
+                document.getElementById('val-strength').innerText = this.strength + '%';
+            });
+
+            // Initialize KaTeX
+            setTimeout(() => {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false}
+                    ]
+                });
+            }, 100);
+
+            this.reset();
+            this.loop();
+        },
+
+        resize() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            this.width = rect.width;
+            this.height = rect.height;
+        },
+
+        reset() {
+            this.setMode(this.mode);
+        },
+
+        setMode(mode) {
+            this.mode = mode;
+            this.magnets = [];
+            
+            // Update buttons
+            document.getElementById('btn-single').classList.toggle('active', mode === 'single');
+            document.getElementById('btn-dual').classList.toggle('active', mode === 'dual');
+            document.getElementById('btn-single').classList.toggle('bg-slate-800', mode !== 'single');
+            document.getElementById('btn-dual').classList.toggle('bg-slate-800', mode !== 'dual');
+
+            if (mode === 'single') {
+                this.magnets.push(new Magnet(this.width / 2, this.height / 2));
+            } else {
+                this.magnets.push(new Magnet(this.width / 3, this.height / 2));
+                this.magnets.push(new Magnet(this.width * 2/3, this.height / 2, Math.PI)); 
+            }
+        },
+
+        toggleLines() { this.showLines = !this.showLines; },
+        toggleCompass() { this.showCompass = !this.showCompass; },
+
+        getFieldAt(x, y) {
+            let Bx = 0;
+            let By = 0;
+            const k = this.strength * 50; 
+
+            this.magnets.forEach(mag => {
+                const poles = mag.getPolePositions();
+                
+                const dxN = x - poles.N.x;
+                const dyN = y - poles.N.y;
+                const rN2 = dxN*dxN + dyN*dyN;
+                const rN = Math.sqrt(rN2);
+                
+                const dxS = x - poles.S.x;
+                const dyS = y - poles.S.y;
+                const rS2 = dxS*dxS + dyS*dyS;
+                const rS = Math.sqrt(rS2);
+
+                const minR = 20; 
+                const rNc = Math.max(rN, minR);
+                const rSc = Math.max(rS, minR);
+
+                Bx += k * (dxN / (rNc*rNc*rNc) - dxS / (rSc*rSc*rSc));
+                By += k * (dyN / (rNc*rNc*rNc) - dyS / (rSc*rSc*rSc));
+            });
+
+            return { x: Bx, y: By };
+        },
+
+        handleInputStart(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            this.magnets.forEach(m => {
+                if (m.contains(mx, my)) {
+                    m.dragging = true;
+                    m.offsetX = mx - m.x;
+                    m.offsetY = my - m.y;
+                }
+            });
+        },
+
+        handleFlip(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            this.magnets.forEach(m => {
+                if (m.contains(mx, my)) {
+                    m.angle += Math.PI;
+                }
+            });
+        },
+
+        handleInputMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
+            this.isMouseInside = true;
+            
+            this.magnets.forEach(m => {
+                if (m.dragging) {
+                    m.x = this.mouseX - m.offsetX;
+                    m.y = this.mouseY - m.offsetY;
+                }
+            });
+        },
+
+        handleInputEnd() {
+            this.magnets.forEach(m => m.dragging = false);
+        },
+
+        loop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Field Lines
+            if (this.showLines) {
+                ctx.lineWidth = 1;
+                const gridSize = 30;
+                
+                ctx.strokeStyle = '#38bdf8'; 
+                ctx.beginPath();
+                
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    for (let y = 0; y < canvas.height; y += gridSize) {
+                        const field = this.getFieldAt(x, y);
+                        const mag = Math.sqrt(field.x*field.x + field.y*field.y);
+                        
+                        if (mag > 0.001) {
+                            const dx = field.x / mag;
+                            const dy = field.y / mag;
+                            const vLen = Math.min(15, Math.max(5, mag * 2000));
+                            
+                            ctx.moveTo(x - dx*vLen/2, y - dy*vLen/2);
+                            ctx.lineTo(x + dx*vLen/2, y + dy*vLen/2);
+                        }
+                    }
+                }
+                ctx.globalAlpha = 0.3;
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+
+            // 2. Draw Compass Grid
+            if (this.showCompass) {
+                const gridSize = 60;
+                for (let x = gridSize/2; x < canvas.width; x += gridSize) {
+                    for (let y = gridSize/2; y < canvas.height; y += gridSize) {
+                        const field = this.getFieldAt(x, y);
+                        const angle = Math.atan2(field.y, field.x);
+                        
+                        ctx.save();
+                        ctx.translate(x, y);
+                        ctx.rotate(angle);
+                        
+                        // Compass Body
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 8, 0, Math.PI*2);
+                        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                        ctx.fill();
+                        
+                        // Needle Line
+                        ctx.beginPath();
+                        ctx.moveTo(-6, 0);
+                        ctx.lineTo(6, 0);
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        
+                        // Red Tip (North)
+                        ctx.beginPath();
+                        ctx.fillStyle = '#f43f5e'; 
+                        ctx.moveTo(8, 0);
+                        ctx.lineTo(2, -3);
+                        ctx.lineTo(2, 3);
+                        ctx.fill();
+                        
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // 3. Draw Magnets
+            this.magnets.forEach(m => {
+                ctx.save();
+                ctx.translate(m.x, m.y);
+                ctx.rotate(m.angle);
+                
+                ctx.shadowColor = 'black';
+                ctx.shadowBlur = 15;
+                
+                ctx.fillStyle = '#3b82f6'; 
+                ctx.fillRect(-m.width/2, -m.height/2, m.width/2, m.height);
+                
+                ctx.fillStyle = '#ef4444'; 
+                ctx.fillRect(0, -m.height/2, m.width/2, m.height);
+                
+                ctx.shadowBlur = 0;
+
+                ctx.font = "bold 20px sans-serif";
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText("S", -m.width/4, 0);
+                ctx.fillText("N", m.width/4, 0);
+                
+                ctx.restore();
+            });
+
+            // 4. Draw Mouse Compass (Canvas Version)
+            // Only if mouse inside and not dragging a magnet
+            const isDragging = this.magnets.some(m => m.dragging);
+            if (this.isMouseInside && !isDragging) {
+                const offset = 40; // Pixels below cursor
+                const cx = this.mouseX;
+                const cy = this.mouseY + offset;
+                
+                // Calculate field at COMPASS position
+                const field = this.getFieldAt(cx, cy);
+                const angle = Math.atan2(field.y, field.x);
+                
+                ctx.save();
+                ctx.translate(cx, cy);
+                
+                // Compass Background
+                ctx.beginPath();
+                ctx.arc(0, 0, 18, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.fill();
+                ctx.stroke();
+                
+                // Rotate to Field
+                ctx.rotate(angle);
+                
+                // Draw Needle (North/Red points along +X in local rotated space)
+                
+                // North (Red)
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(14, 0);
+                ctx.lineTo(0, 4);
+                ctx.lineTo(0, -4);
+                ctx.fillStyle = '#f43f5e';
+                ctx.fill();
+                
+                // South (Blue)
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-14, 0);
+                ctx.lineTo(0, 4);
+                ctx.lineTo(0, -4);
+                ctx.fillStyle = '#3b82f6';
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            requestAnimationFrame(() => this.loop());
+        }
+    };
+
+    window.onload = () => sim.init();
+
+</script>
+</body>
+</html>
