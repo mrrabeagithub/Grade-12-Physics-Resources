@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 10: Capacitors & RC Circuits Mastery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
+        .dark .glass-panel { background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        .hidden-app { display: none; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased h-screen w-screen overflow-hidden flex flex-col transition-colors duration-300">
+
+    <!-- SECURITY MODULE: Login Overlay -->
+    <div id="login-overlay" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i class="fa-solid fa-microchip text-white text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Smart-Sheet Architect</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Physics Department • v2.2.0</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Access Code</label>
+                    <input type="password" id="login-code" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors" placeholder="****">
+                </div>
+                <button onclick="authenticate()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-md mt-4">
+                    Authenticate Session
+                </button>
+            </div>
+            <div id="login-error" class="hidden mt-4 text-red-500 text-sm text-center font-semibold bg-red-50 dark:bg-red-900/50 p-2 rounded">
+                Invalid Credentials. Access Denied.
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APPLICATION -->
+    <div id="main-app" class="hidden-app flex flex-col h-full overflow-y-auto fade-in">
+        
+        <!-- Header -->
+        <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-lg text-blue-700 dark:text-blue-400">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold leading-tight dark:text-white">Chapter 10: Capacitors & RC Circuits</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Grade 12 (GS/LS) • Rabih A.G.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleDarkMode()" class="p-2 rounded-full text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus:outline-none" title="Toggle Dark Mode">
+                        <i id="theme-icon" class="fa-solid fa-moon text-lg"></i>
+                    </button>
+                    <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-700/50 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors duration-300">
+                        <i class="fa-solid fa-user-graduate text-slate-400 dark:text-slate-500"></i>
+                        <span id="display-student-name" class="font-bold text-slate-700 dark:text-slate-200">Student Name</span>
+                        <span class="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider">Authenticated</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow max-w-4xl mx-auto px-4 py-6 w-full space-y-6">
+            
+            <!-- QUIZ MODULE -->
+            <section class="glass-panel rounded-xl p-6 transition-colors duration-300">
+                <div class="flex items-center justify-between mb-6 border-b border-slate-200 dark:border-slate-700 pb-2">
+                    <h2 class="text-lg font-bold text-slate-800 dark:text-white"><i class="fa-solid fa-list-check mr-2 text-blue-600 dark:text-blue-400"></i>Mastery Quiz</h2>
+                    <span class="text-sm font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full"><i class="fa-solid fa-star mr-1"></i>10 Points</span>
+                </div>
+                
+                <div id="quiz-container" class="space-y-6">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+                    <button id="submit-btn" onclick="submitWorksheet()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-12 rounded-xl text-lg transition-transform transform hover:scale-105 shadow-xl">
+                        <i class="fa-solid fa-paper-plane mr-2"></i> Submit Worksheet to Server
+                    </button>
+                </div>
+            </section>
+
+        </main>
+        
+        <!-- Footer -->
+        <footer class="bg-slate-800 dark:bg-black text-slate-400 py-4 text-center text-sm mt-auto transition-colors duration-300">
+            <p>Smart-Sheet Protocol Active. Universal Physics Class Script © 2026</p>
+        </footer>
+    </div>
+
+    <!-- Custom Message Box -->
+    <div id="message-box" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 text-center transform scale-95 transition-all duration-300" id="message-box-content">
+            <div id="msg-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"></div>
+            <h3 id="msg-title" class="text-xl font-bold text-slate-800 dark:text-white mb-2"></h3>
+            <p id="msg-desc" class="text-slate-600 dark:text-slate-300 mb-6"></p>
+            <button onclick="closeMessageBox()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg w-full transition-colors">
+                Acknowledge
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- DARK MODE TOGGLE ---
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        }
+
+        // --- SECURITY MODULE ---
+        const DATABASE = {
+            "0000": { name: "Admin Override", role: "admin" },
+            "1111": { name: "Tutor Override", role: "tutor" },
+            "9147": { name: "احمد / محمود / صيداوي", role: "student" }, // From G12 DB
+            "8963": { name: "هادي / عمر / ابراهيم", role: "student" },  // From G12 DB
+            "2026": { name: "عباس", role: "student" }                   // New student
+        };
+
+        let currentUser = null;
+
+        function authenticate() {
+            const codeInput = document.getElementById('login-code').value.trim();
+            const errorDiv = document.getElementById('login-error');
+
+            if(DATABASE[codeInput]) {
+                currentUser = DATABASE[codeInput].name;
+                document.getElementById('display-student-name').innerText = currentUser;
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden-app');
+                
+                renderQuiz();
+                return;
+            }
+            
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 3000);
+        }
+
+        // --- QUIZ MODULE ---
+        const quizData = [
+            {
+                q: "1. An initially uncharged capacitor is connected in series with a resistor and an ideal battery. At the exact moment the switch is closed (t = 0), what is the behavior of the capacitor?",
+                options: [
+                    { text: "It acts as a short circuit (u_C = 0).", isCorrect: true, id: "A" },
+                    { text: "It acts as an open circuit (i = 0).", isCorrect: false, id: "B" },
+                    { text: "It acts as a pure resistor with resistance R.", isCorrect: false, id: "C" },
+                    { text: "It immediately reaches the battery voltage E.", isCorrect: false, id: "D" }
+                ],
+                feedback: "Initially, there is no charge on the plates, so the potential difference is zero, allowing maximum current to flow as if it were a wire."
+            },
+            {
+                q: "2. A capacitor with C = 220 µF is connected to a 10 V DC source. What is the maximum electrical energy stored in the capacitor at steady state?",
+                options: [
+                    { text: "11.0 mJ", isCorrect: true, id: "A" },
+                    { text: "22.0 mJ", isCorrect: false, id: "B" },
+                    { text: "1.1 J", isCorrect: false, id: "C" },
+                    { text: "110 µJ", isCorrect: false, id: "D" }
+                ],
+                feedback: "Using W = 1/2 C (u_C)², we calculate 1/2 * (220 × 10^-6) * (10)² = 0.011 J, which is 11.0 mJ."
+            },
+            {
+                q: "3. In an RC charging circuit, the differential equation for the capacitor voltage is given by: u_C + τ(du_C/dt) = E. What does the term τ(du_C/dt) represent physically when t = 0?",
+                options: [
+                    { text: "The initial voltage across the resistor u_R.", isCorrect: true, id: "A" },
+                    { text: "The steady-state voltage across the capacitor.", isCorrect: false, id: "B" },
+                    { text: "The total energy stored in the dielectric.", isCorrect: false, id: "C" },
+                    { text: "The internal resistance of the battery.", isCorrect: false, id: "D" }
+                ],
+                feedback: "According to the Law of Addition of Voltages, u_R + u_C = E. At t=0, u_C=0, so u_R = E = τ(du_C/dt)."
+            },
+            {
+                q: "4. According to the 'Golden Rule of Symmetry', the capacitor resists a change in voltage (u_C) exactly like the coil (inductor) resists a change in:",
+                options: [
+                    { text: "Current (i)", isCorrect: true, id: "A" },
+                    { text: "Resistance (R)", isCorrect: false, id: "B" },
+                    { text: "Magnetic Flux (Φ)", isCorrect: false, id: "C" },
+                    { text: "Electromotive force (E)", isCorrect: false, id: "D" }
+                ],
+                feedback: "Capacitors oppose abrupt changes in voltage, while inductors oppose abrupt changes in current due to self-induction."
+            },
+            {
+                q: "5. A student is determining the time constant τ graphically. If the tangent to the charging curve at t = 0 is drawn, where will it intersect the horizontal asymptote u_C = E?",
+                options: [
+                    { text: "At the time t = τ.", isCorrect: true, id: "A" },
+                    { text: "At the time t = 5τ.", isCorrect: false, id: "B" },
+                    { text: "At the voltage u_C = 0.63E.", isCorrect: false, id: "C" },
+                    { text: "At the origin (0,0).", isCorrect: false, id: "D" }
+                ],
+                feedback: "This is one of the 'Six Roads to τ'; the initial slope E/τ leads directly to the maximum value at exactly one time constant."
+            },
+            {
+                q: "6. During the discharge of a capacitor through a resistor R, the voltage follows u_C(t) = E * e^(-t/τ). If we linearize this by plotting ln(u_C) versus time t, what is the slope of the resulting line?",
+                options: [
+                    { text: "m = -1/τ", isCorrect: true, id: "A" },
+                    { text: "m = τ", isCorrect: false, id: "B" },
+                    { text: "m = -RC", isCorrect: false, id: "C" },
+                    { text: "m = ln(E)", isCorrect: false, id: "D" }
+                ],
+                feedback: "Taking the natural log gives ln(u_C) = (-1/τ)t + ln(E), which fits the linear form y = mx + c. Therefore, the slope is -1/τ."
+            },
+            {
+                q: "7. In a charging RC circuit, at what time t do the voltage across the capacitor (u_C) and the voltage across the resistor (u_R) have exactly the same value?",
+                options: [
+                    { text: "t = τ ln(2)", isCorrect: true, id: "A" },
+                    { text: "t = τ", isCorrect: false, id: "B" },
+                    { text: "t = 0.5τ", isCorrect: false, id: "C" },
+                    { text: "t = τ ln(0.63)", isCorrect: false, id: "D" }
+                ],
+                feedback: "Setting E(1 - e^(-t/τ)) = E e^(-t/τ) leads to 1 - e^(-t/τ) = e^(-t/τ), thus 2e^(-t/τ) = 1, which solves to t = τ ln(2)."
+            },
+            {
+                q: "8. What is the physical function of the dielectric material placed between the armatures of a capacitor?",
+                options: [
+                    { text: "To act as an insulator and increase the capacity of the capacitor.", isCorrect: true, id: "A" },
+                    { text: "To allow a small leakage current to prevent overcharging.", isCorrect: false, id: "B" },
+                    { text: "To decrease the time constant τ for faster charging.", isCorrect: false, id: "C" },
+                    { text: "To convert electrical energy into magnetic energy.", isCorrect: false, id: "D" }
+                ],
+                feedback: "A dielectric prevents charge from flowing between plates (insulator) while increasing capacitance by reducing the internal electric field."
+            },
+            {
+                q: "9. If the resistance in a discharging loop is doubled while keeping the same capacitor, how does the discharge time change?",
+                options: [
+                    { text: "The discharge takes twice as long (τ doubles).", isCorrect: true, id: "A" },
+                    { text: "The discharge occurs twice as fast (τ is halved).", isCorrect: false, id: "B" },
+                    { text: "The discharge time remains unchanged.", isCorrect: false, id: "C" },
+                    { text: "The capacitor will never fully discharge.", isCorrect: false, id: "D" }
+                ],
+                feedback: "Since τ = R_eq * C, doubling R linearly doubles the time constant, slowing down the discharge process."
+            },
+            {
+                q: "10. During the complete discharge phase of an RC circuit, what happens to the energy that was stored in the capacitor?",
+                options: [
+                    { text: "It is dissipated as thermal energy (Joule heat) in the resistor.", isCorrect: true, id: "A" },
+                    { text: "It is returned to the battery.", isCorrect: false, id: "B" },
+                    { text: "It is stored in the electric field of the dielectric permanently.", isCorrect: false, id: "C" },
+                    { text: "It is destroyed, violating the law of conservation of energy.", isCorrect: false, id: "D" }
+                ],
+                feedback: "As current flows through the resistor during discharge, the electrical potential energy is converted to heat via the Joule effect."
+            }
+        ];
+
+        function renderQuiz() {
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = '';
+
+            quizData.forEach((qObj, index) => {
+                let html = `
+                <div class="p-5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 shadow-sm hover:shadow-md dark:hover:shadow-slate-700/50 transition-all duration-300" id="q-card-${index}">
+                    <p class="font-semibold text-slate-800 dark:text-slate-100 mb-4 text-base">${qObj.q}</p>
+                    <div class="space-y-2 pl-2">
+                `;
+                
+                qObj.options.forEach((opt, oIndex) => {
+                    html += `
+                        <label class="flex items-start cursor-pointer group">
+                            <div class="flex items-center h-5">
+                                <input type="radio" name="q${index}" value="${opt.id}" class="w-4 h-4 text-blue-600 border-gray-300 dark:border-slate-600 dark:bg-slate-700 focus:ring-blue-500">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <span class="text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">${opt.text}</span>
+                            </div>
+                        </label>
+                    `;
+                });
+
+                html += `
+                    </div>
+                    <div id="feedback-${index}" class="hidden mt-4 p-3 rounded-md text-sm font-medium border transition-colors duration-300"></div>
+                </div>`;
+                
+                container.innerHTML += html;
+            });
+        }
+
+        // --- SUBMISSION PROTOCOL ---
+        const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxEqjkidMAWs1wrCok-ZVWhMK1TTg-kenzZubCTvkSe_AwBub2Zet9GXpjPSiXXmI6xYw/exec";
+
+        function showMessageBox(type, title, desc) {
+            const box = document.getElementById('message-box');
+            const icon = document.getElementById('msg-icon');
+            const titleEl = document.getElementById('msg-title');
+            const descEl = document.getElementById('msg-desc');
+            const content = document.getElementById('message-box-content');
+
+            if(type === 'success') {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500 dark:text-green-400"></i>';
+                icon.className = "w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl";
+            } else if (type === 'error') {
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500 dark:text-red-400"></i>';
+                icon.className = "w-16 h-16 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl";
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-blue-500 dark:text-blue-400"></i>';
+                icon.className = "w-16 h-16 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl";
+            }
+
+            titleEl.innerText = title;
+            descEl.innerText = desc;
+            
+            box.classList.remove('hidden');
+            box.classList.add('flex');
+            setTimeout(() => {
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeMessageBox() {
+            const box = document.getElementById('message-box');
+            const content = document.getElementById('message-box-content');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                box.classList.add('hidden');
+                box.classList.remove('flex');
+            }, 200);
+        }
+
+        function submitWorksheet() {
+            let score = 0;
+            let detailsArray = [];
+            let allAnswered = true;
+
+            quizData.forEach((qObj, index) => {
+                const selected = document.querySelector(`input[name="q${index}"]:checked`);
+                const feedbackDiv = document.getElementById(`feedback-${index}`);
+                const card = document.getElementById(`q-card-${index}`);
+                
+                if (!selected) {
+                    allAnswered = false;
+                    card.classList.add('border-red-300', 'bg-red-50', 'dark:bg-red-900/20', 'dark:border-red-800');
+                    setTimeout(() => card.classList.remove('border-red-300', 'bg-red-50', 'dark:bg-red-900/20', 'dark:border-red-800'), 2000);
+                    return;
+                }
+
+                const selectedId = selected.value;
+                const correctOpt = qObj.options.find(o => o.isCorrect);
+                const isCorrect = selectedId === correctOpt.id;
+
+                if (isCorrect) score++;
+
+                detailsArray.push(`Q${index+1}: ${isCorrect ? 'Correct' : 'Incorrect'} (${selectedId})`);
+
+                // UI Feedback
+                feedbackDiv.classList.remove('hidden');
+                if (isCorrect) {
+                    feedbackDiv.classList.add('bg-green-50', 'dark:bg-green-900/50', 'text-green-800', 'dark:text-green-200', 'border-green-200', 'dark:border-green-800');
+                    feedbackDiv.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i><strong>Correct!</strong> ${qObj.feedback}`;
+                } else {
+                    feedbackDiv.classList.add('bg-red-50', 'dark:bg-red-900/50', 'text-red-800', 'dark:text-red-200', 'border-red-200', 'dark:border-red-800');
+                    feedbackDiv.innerHTML = `<i class="fa-solid fa-times-circle mr-2"></i><strong>Incorrect.</strong> The correct answer was ${correctOpt.id}. <br><span class="text-xs mt-1 block">${qObj.feedback}</span>`;
+                }
+
+                // Disable inputs
+                document.querySelectorAll(`input[name="q${index}"]`).forEach(input => input.disabled = true);
+            });
+
+            if (!allAnswered) {
+                showMessageBox('error', 'Incomplete Worksheet', 'Please answer all questions before submitting.');
+                return;
+            }
+
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Transmitting...';
+            
+            // Construct Payload strictly per protocol
+            const payload = {
+                name: currentUser,
+                topic: "Chapter 10: Capacitors & RC Circuits Mastery Quiz",
+                score: `${score}/${quizData.length}`,
+                answers: detailsArray.join(", ")
+            };
+
+            // Transmit
+            fetch(BACKEND_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                showMessageBox('success', 'Submission Successful!', `Score: ${score}/${quizData.length}. Your data has been securely logged via Universal Class Script.`);
+                document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-check mr-2"></i> Submitted';
+                document.getElementById('submit-btn').classList.replace('bg-green-600', 'bg-slate-400');
+                document.getElementById('submit-btn').classList.replace('hover:bg-green-700', 'hover:bg-slate-400');
+                document.getElementById('submit-btn').classList.remove('hover:scale-105');
+            }).catch(error => {
+                showMessageBox('error', 'Transmission Failed', 'Check your network connection and try again.');
+                document.getElementById('submit-btn').disabled = false;
+                document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> Retry Submission';
+            });
+        }
+    </script>
+</body>
+</html>
