@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHM Phase Solver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        canvas { user-select: none; }
+    </style>
+</head>
+<body class="p-6 text-slate-800 dark:text-slate-100 flex flex-col items-center min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+
+    <div class="max-w-6xl w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+        
+        <!-- Header -->
+        <div class="bg-slate-900 dark:bg-slate-950 text-white p-6 border-b border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors duration-300">
+            <div>
+                <h1 class="text-2xl font-bold flex items-baseline gap-2">
+                    SHM Phase Solver <span class="text-sm font-normal text-slate-400">(by Rabih A.G.)</span>
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">Visualize Initial Phase $\phi$ and Wave Function $x(t)$</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-xs font-bold text-slate-200 transition-colors flex items-center gap-2">
+                    <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+                </button>
+
+                <!-- Controls -->
+                <div class="flex flex-wrap gap-4 items-end bg-slate-800 p-3 rounded-lg border border-slate-700">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">$x_0$ (m)</label>
+                        <input type="number" id="in_x0" value="-1" step="0.1" class="w-20 p-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none" oninput="update()">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">$v_0$ (m/s)</label>
+                        <input type="number" id="in_v0" value="10" step="0.1" class="w-20 p-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none" oninput="update()">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">$\omega$ (rad/s)</label>
+                        <input type="number" id="in_omega" value="22.36" step="0.01" class="w-20 p-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none" oninput="update()">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">Phase Range</label>
+                        <select id="in_conv" class="p-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none" onchange="update()">
+                            <option value="signed">Signed $[-\pi, \pi]$</option>
+                            <option value="positive">Positive $[0, 2\pi]$</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2">
+            
+            <!-- Left: Wave Plot -->
+            <div class="p-6 border-r border-slate-200 dark:border-slate-700 transition-colors duration-300">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-teal-500"></span> Wave Function $x(t)$
+                    </h3>
+                    <span id="wave-range-label" class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">Range: ...</span>
+                </div>
+                <div class="h-80 relative">
+                    <canvas id="waveChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Right: Phasor Circle -->
+            <div class="p-6 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center relative transition-colors duration-300">
+                <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 w-full text-left flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-red-500"></span> Phasor Diagram
+                </h3>
+                
+                <div class="relative w-80 h-80 bg-white dark:bg-slate-800 rounded-full shadow-inner border border-slate-200 dark:border-slate-700 transition-colors duration-300">
+                    <canvas id="circleCanvas" width="320" height="320" class="absolute inset-0"></canvas>
+                    
+                    <!-- Labels -->
+                    <div class="absolute top-1/2 right-2 text-xs text-slate-400 font-mono transform -translate-y-1/2">+x</div>
+                    <div class="absolute bottom-2 left-1/2 text-xs text-slate-400 font-mono transform -translate-x-1/2">+v/ω</div>
+                </div>
+
+                <!-- Result Box -->
+                <div class="mt-6 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 w-full max-w-sm transition-colors duration-300">
+                    <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2 mb-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase">Calculated Phase $\phi$</span>
+                        <span id="res-phi" class="text-xl font-bold text-red-600 dark:text-red-400 font-mono">--</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-400 uppercase">Amplitude $X_m$</span>
+                        <span id="res-xm" class="text-lg font-bold text-teal-600 dark:text-teal-400 font-mono">--</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let waveChart = null;
+        let isDark = false;
+        const circleCanvas = document.getElementById('circleCanvas');
+        const ctxCircle = circleCanvas.getContext('2d');
+
+        function toggleTheme() {
+            isDark = !isDark;
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            
+            if (isDark) {
+                html.classList.add('dark');
+                icon.innerText = "☀️";
+                text.innerText = "Light Mode";
+            } else {
+                html.classList.remove('dark');
+                icon.innerText = "🌙";
+                text.innerText = "Dark Mode";
+            }
+            update(); // Re-render charts with correct colors
+        }
+
+        function initChart() {
+            const ctxWave = document.getElementById('waveChart').getContext('2d');
+            waveChart = new Chart(ctxWave, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'x(t)',
+                        borderColor: '#14b8a6', // teal-500
+                        backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.4,
+                        data: []
+                    }, {
+                        label: 'Zero',
+                        data: [],
+                        borderColor: '#94a3b8',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        borderDash: [5, 5],
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: { 
+                            title: { display: true, text: 'Time (s)' },
+                            ticks: { maxTicksLimit: 8 },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        y: { 
+                            title: { display: true, text: 'Displacement (m)' },
+                            grid: { color: '#f1f5f9' }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function drawPhasor(phi) {
+            const w = circleCanvas.width;
+            const h = circleCanvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const r = w * 0.4; // Radius of unit circle
+
+            ctxCircle.clearRect(0, 0, w, h);
+
+            // Colors based on theme
+            const axisColor = isDark ? '#475569' : '#e2e8f0'; // slate-600 : slate-200
+            const circleColor = isDark ? '#334155' : '#cbd5e1'; // slate-700 : slate-300
+            const vectorColor = isDark ? '#f87171' : '#ef4444'; // red-400 : red-500
+
+            // 1. Grid / Axes
+            ctxCircle.strokeStyle = axisColor;
+            ctxCircle.lineWidth = 1;
+            ctxCircle.beginPath();
+            ctxCircle.moveTo(0, cy); ctxCircle.lineTo(w, cy); // X axis
+            ctxCircle.moveTo(cx, 0); ctxCircle.lineTo(cx, h); // Y axis
+            ctxCircle.stroke();
+
+            // 2. Unit Circle (Dashed)
+            ctxCircle.strokeStyle = circleColor;
+            ctxCircle.setLineDash([5, 5]);
+            ctxCircle.beginPath();
+            ctxCircle.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctxCircle.stroke();
+            ctxCircle.setLineDash([]);
+
+            // 3. Phasor Vector
+            // Note: Standard math, angle 0 is right, positive is counter-clockwise.
+            // Canvas Y grows down, so y = cy - r*sin(phi).
+            const tipX = cx + r * Math.cos(phi);
+            const tipY = cy - r * Math.sin(phi);
+
+            ctxCircle.strokeStyle = vectorColor;
+            ctxCircle.lineWidth = 4;
+            ctxCircle.beginPath();
+            ctxCircle.moveTo(cx, cy);
+            ctxCircle.lineTo(tipX, tipY);
+            ctxCircle.stroke();
+
+            // 4. Arrow Head
+            const headLen = 15;
+            const arrowAngle = Math.PI / 6;
+            const lineAngle = Math.atan2(cy - tipY, tipX - cx); 
+            
+            ctxCircle.fillStyle = vectorColor;
+            ctxCircle.beginPath();
+            ctxCircle.moveTo(tipX, tipY);
+            ctxCircle.lineTo(
+                tipX - headLen * Math.cos(lineAngle - arrowAngle),
+                tipY - headLen * Math.sin(lineAngle - arrowAngle)
+            );
+            ctxCircle.lineTo(
+                tipX - headLen * Math.cos(lineAngle + arrowAngle),
+                tipY - headLen * Math.sin(lineAngle + arrowAngle)
+            );
+            ctxCircle.closePath();
+            ctxCircle.fill();
+
+            // 5. Arc for Angle
+            ctxCircle.strokeStyle = vectorColor;
+            ctxCircle.lineWidth = 1;
+            ctxCircle.beginPath();
+            ctxCircle.arc(cx, cy, r * 0.3, 0, -phi, true); // Visual arc
+            ctxCircle.stroke();
+        }
+
+        function getPhi(x0, v0, omega, convention) {
+            let phi = Math.atan2(x0, v0 / omega); 
+            if (convention === 'positive') {
+                if (phi < 0) phi += 2 * Math.PI;
+            }
+            return phi;
+        }
+
+        function update() {
+            // Read Inputs
+            const x0 = parseFloat(document.getElementById('in_x0').value) || 0;
+            const v0 = parseFloat(document.getElementById('in_v0').value) || 0;
+            const omega = parseFloat(document.getElementById('in_omega').value) || 1;
+            const convention = document.getElementById('in_conv').value;
+
+            // Calculate
+            const phi = getPhi(x0, v0, omega, convention);
+            const Xm = Math.sqrt(Math.pow(x0, 2) + Math.pow(v0 / omega, 2));
+
+            // Update UI
+            document.getElementById('res-phi').innerText = phi.toFixed(4) + " rad";
+            document.getElementById('res-xm').innerText = Xm.toFixed(4);
+            document.getElementById('wave-range-label').innerText = convention === 'positive' ? "Range: [0, 2π]" : "Range: [-π, π]";
+
+            // Update Chart
+            const labels = [];
+            const dataWave = [];
+            const dataZero = [];
+            
+            const T = (2 * Math.PI) / omega;
+            const tMax = T * 1.5;
+            const points = 200;
+
+            for (let i = 0; i <= points; i++) {
+                const t = (i / points) * tMax;
+                labels.push(t.toFixed(2));
+                dataWave.push(Xm * Math.sin(omega * t + phi));
+                dataZero.push(0);
+            }
+
+            if (waveChart) {
+                // Theme Logic for Chart
+                const gridColor = isDark ? '#334155' : '#f1f5f9';
+                const tickColor = isDark ? '#94a3b8' : '#64748b';
+                
+                waveChart.options.scales.x.grid.color = gridColor;
+                waveChart.options.scales.y.grid.color = gridColor;
+                waveChart.options.scales.x.ticks.color = tickColor;
+                waveChart.options.scales.y.ticks.color = tickColor;
+                waveChart.options.scales.x.title.color = tickColor;
+                waveChart.options.scales.y.title.color = tickColor;
+
+                waveChart.data.labels = labels;
+                waveChart.data.datasets[0].data = dataWave;
+                waveChart.data.datasets[1].data = dataZero;
+                waveChart.update();
+            }
+
+            // Update Phasor
+            drawPhasor(phi);
+            
+            // Refresh MathJax if needed
+            if (window.MathJax && window.MathJax.typeset) {
+               // MathJax.typeset(); 
+            }
+        }
+
+        // Init
+        window.onload = () => {
+            initChart();
+            update();
+        };
+
+    </script>
+</body>
+</html>

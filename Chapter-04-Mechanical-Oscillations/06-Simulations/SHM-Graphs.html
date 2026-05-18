@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Spring-Mass Simulation v2</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --text-color: #333;
+            --card-bg: white;
+            --card-shadow: rgba(0,0,0,0.1);
+            --border-color: #eee;
+            --input-bg: white;
+            --btn-start-bg: #28a745;
+            --btn-start-hover: #218838;
+            --btn-reset-bg: #007bff;
+            --btn-reset-hover: #0056b3;
+            --btn-pause-bg: #ffc107;
+            --btn-pause-hover: #e0a800;
+            --btn-default-bg: transparent;
+            --btn-default-text: #666;
+            --btn-default-border: #ccc;
+            --overlay-bg: rgba(255, 255, 255, 0.9);
+            --overlay-border: #ddd;
+            --chart-grid: #e5e5e5;
+            --canvas-env-stroke: #333;
+            --canvas-text: #888;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --card-shadow: rgba(0,0,0,0.5);
+            --border-color: #333;
+            --input-bg: #2c2c2c;
+            --btn-start-bg: #1e7e34;
+            --btn-start-hover: #155d27;
+            --btn-reset-bg: #0056b3;
+            --btn-reset-hover: #004494;
+            --btn-pause-bg: #d39e00;
+            --btn-pause-hover: #b28600;
+            --btn-default-bg: #2c2c2c;
+            --btn-default-text: #aaa;
+            --btn-default-border: #555;
+            --overlay-bg: rgba(30, 30, 30, 0.9);
+            --overlay-border: #444;
+            --chart-grid: #444;
+            --canvas-env-stroke: #ccc;
+            --canvas-text: #aaa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        h1 {
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        .subtitle {
+            font-size: 0.9em;
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1300px;
+        }
+        .controls {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px var(--card-shadow);
+            width: 100%;
+            max-width: 300px;
+            height: fit-content;
+            transition: background-color 0.3s;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 0.9em;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            background-color: var(--input-bg);
+        }
+        .value-display {
+            float: right;
+            color: #007bff;
+            font-weight: bold;
+        }
+        .charts-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 600px;
+        }
+        .chart-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .chart-box {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px var(--card-shadow);
+            height: 280px;
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+            transition: background-color 0.3s;
+        }
+        .regime-indicator {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(232, 244, 253, 0.1); /* Transparent for dark mode compat */
+            border-left: 5px solid #007bff;
+            border-radius: 4px;
+            /* In light mode, override to match original look if needed, or keep transparent */
+        }
+        [data-theme="light"] .regime-indicator {
+             background-color: #e8f4fd;
+        }
+        
+        .regime-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            display: block;
+        }
+        .regime-desc {
+            font-size: 0.9em;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+        button#resetBtn {
+            background-color: var(--btn-reset-bg);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        button#resetBtn:hover {
+            background-color: var(--btn-reset-hover);
+        }
+
+        /* Theme Toggle */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 24px;
+            position: relative;
+            width: 50px;
+            margin-right: 10px;
+        }
+        .theme-switch input {
+            display: none;
+        }
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            background-color: white;
+            bottom: 4px;
+            content: "";
+            height: 16px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 16px;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #007bff;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .theme-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Spring-Mass System 📊</h1>
+    <div class="subtitle">(by Rabih A.G.)</div>
+    
+    <div class="container">
+        <div class="controls">
+            <!-- Theme Toggle -->
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" />
+                    <div class="slider round"></div>
+                </label>
+                <span class="theme-label">Dark Mode</span>
+            </div>
+
+            <div class="control-group">
+                <label>Mass (m): <span id="val-m" class="value-display">2.0 kg</span></label>
+                <input type="range" id="slider-m" min="0.1" max="10" step="0.1" value="2.0">
+            </div>
+            <div class="control-group">
+                <label>Spring Constant (k): <span id="val-k" class="value-display">50 N/m</span></label>
+                <input type="range" id="slider-k" min="1" max="100" step="1" value="50">
+            </div>
+            <div class="control-group">
+                <label>Damping (b): <span id="val-b" class="value-display">1.0 kg/s</span></label>
+                <input type="range" id="slider-b" min="0" max="20" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <label>Initial Position (x₀): <span id="val-x0" class="value-display">1.0 m</span></label>
+                <input type="range" id="slider-x0" min="-2" max="2" step="0.1" value="1.0">
+            </div>
+
+            <div class="regime-indicator">
+                <span id="regime-title" class="regime-title">Underdamped</span>
+                <span id="regime-info" class="regime-desc">Critical Damping (bc): 20.00 kg/s</span>
+            </div>
+            
+            <button id="resetBtn">Reset Parameters</button>
+        </div>
+
+        <div class="charts-container">
+            <!-- Row 1: Time Domain (x-t, v-t) -->
+            <div class="chart-row">
+                <div class="chart-box">
+                    <canvas id="posChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="velChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Row 2: Phase Space & Acceleration-Position -->
+            <div class="chart-row">
+                <div class="chart-box">
+                    <canvas id="phaseChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="accPosChart"></canvas> <!-- NEW Chart -->
+                </div>
+            </div>
+
+            <!-- Row 3: Energies -->
+            <div class="chart-row">
+                <div class="chart-box">
+                    <canvas id="energyTimeChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="energyPosChart"></canvas> <!-- Updated Chart (EPE + KE vs x) -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const config = {
+            m: 2.0,
+            k: 50.0,
+            b: 1.0,
+            x0: 1.0,
+            v0: 0.0,
+            tMax: 20,
+            dt: 0.05,
+            darkMode: false
+        };
+
+        // --- Theme Logic ---
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                config.darkMode = true;
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                config.darkMode = false;
+            }
+            updateChartsTheme(config.darkMode);
+        }
+        toggleSwitch.addEventListener('change', switchTheme, false);
+
+        // --- Physics Engine ---
+        function calculateTrajectory() {
+            const { m, k, b, x0, v0, tMax, dt } = config;
+            const w0 = Math.sqrt(k / m);
+            const bc = 2 * Math.sqrt(m * k);
+            const zeta = b / bc;
+
+            let tPoints = [];
+            let xPoints = [];
+            let vPoints = [];
+            let aPoints = []; // Acceleration points
+            let kePoints = [];
+            let pePoints = [];
+            let mePoints = [];
+            
+            let envUpper = [];
+            let envLower = [];
+
+            for (let t = 0; t <= tMax; t += dt) {
+                tPoints.push(t.toFixed(2));
+                let x_t, v_t, a_t;
+
+                if (zeta < 1) {
+                    // Underdamped
+                    const wd = w0 * Math.sqrt(1 - zeta * zeta);
+                    const decay = Math.exp(-zeta * w0 * t);
+                    const A = x0;
+                    const B = (v0 + zeta * w0 * x0) / wd;
+
+                    x_t = decay * (A * Math.cos(wd * t) + B * Math.sin(wd * t));
+                    v_t = -zeta * w0 * x_t + decay * (-A * wd * Math.sin(wd * t) + B * wd * Math.cos(wd * t));
+                    
+                    envUpper.push(x0 * decay);
+                    envLower.push(-x0 * decay);
+
+                } else if (Math.abs(zeta - 1) < 0.001) {
+                    // Critically Damped
+                    const decay = Math.exp(-w0 * t);
+                    const A = x0;
+                    const B = v0 + w0 * x0;
+                    x_t = (A + B * t) * decay;
+                    v_t = B * decay + (A + B * t) * (-w0) * decay;
+                    envUpper.push(null); envLower.push(null);
+                } else {
+                    // Overdamped
+                    const r1 = -w0 * (zeta - Math.sqrt(zeta * zeta - 1));
+                    const r2 = -w0 * (zeta + Math.sqrt(zeta * zeta - 1));
+                    const C2 = (v0 - x0 * r1) / (r2 - r1);
+                    const C1 = x0 - C2;
+
+                    x_t = C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t);
+                    v_t = C1 * r1 * Math.exp(r1 * t) + C2 * r2 * Math.exp(r2 * t);
+                    envUpper.push(null); envLower.push(null);
+                }
+
+                // Calculate Acceleration (a = -kx/m - bv/m)
+                a_t = (-k * x_t - b * v_t) / m;
+
+                xPoints.push(x_t);
+                vPoints.push(v_t);
+                aPoints.push(a_t);
+
+                // Calculate Energies
+                const ke = 0.5 * m * v_t * v_t;
+                const pe = 0.5 * k * x_t * x_t;
+                kePoints.push(ke);
+                pePoints.push(pe);
+                mePoints.push(ke + pe);
+            }
+            
+            // Generate ideal EPE curve for EPE vs Position graph (parabola background)
+            const maxAmp = Math.max(Math.abs(x0), 0.1);
+            const xStep = maxAmp / 50;
+            let xRange = [];
+            let epeCurve = [];
+            for(let x = -maxAmp; x <= maxAmp; x += xStep) {
+                xRange.push(x);
+                epeCurve.push(0.5 * k * x * x);
+            }
+
+            // Determine Regime Text
+            let regime = "";
+            let color = "";
+            if (zeta < 1) { 
+                regime = "Underdamped (Oscillates)"; 
+                color = "#007bff";
+            } else if (Math.abs(zeta - 1) < 0.001) { 
+                regime = "Critically Damped"; 
+                color = "#28a745";
+            } else { 
+                regime = "Overdamped (No Oscillation)"; 
+                color = "#dc3545";
+            }
+
+            return { tPoints, xPoints, vPoints, aPoints, kePoints, pePoints, mePoints, xRange, epeCurve, envUpper, envLower, regime, bc, color };
+        }
+
+        // --- Chart Setup ---
+        const ctxPos = document.getElementById('posChart').getContext('2d');
+        const ctxVel = document.getElementById('velChart').getContext('2d');
+        const ctxPhase = document.getElementById('phaseChart').getContext('2d');
+        const ctxAccPos = document.getElementById('accPosChart').getContext('2d'); // NEW
+        const ctxEnergyTime = document.getElementById('energyTimeChart').getContext('2d');
+        const ctxEnergyPos = document.getElementById('energyPosChart').getContext('2d'); // Renamed
+
+        // Shared Options
+        const commonOptions = {
+            responsive: true, 
+            maintainAspectRatio: false, 
+            animation: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false } }
+        };
+
+        // 1. Position vs Time
+        const posChart = new Chart(ctxPos, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'Displacement x(t)', data: [], borderColor: '#007bff', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                    { label: 'Envelope (+)', data: [], borderColor: 'rgba(100,100,100,0.3)', borderWidth: 1, pointRadius: 0, borderDash: [5, 5], fill: false },
+                    { label: 'Envelope (-)', data: [], borderColor: 'rgba(100,100,100,0.3)', borderWidth: 1, pointRadius: 0, borderDash: [5, 5], fill: false }
+                ]
+            },
+            options: {
+                ...commonOptions,
+                plugins: { ...commonOptions.plugins, title: { display: true, text: 'Displacement vs. Time' } },
+                scales: { x: { title: { display: true, text: 'Time (s)' }, ticks: { maxTicksLimit: 8 } }, y: { title: { display: true, text: 'Position (m)' } } }
+            }
+        });
+
+        // 2. Velocity vs Time
+        const velChart = new Chart(ctxVel, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{ label: 'Velocity v(t)', data: [], borderColor: '#dc3545', borderWidth: 2, pointRadius: 0, tension: 0.4 }]
+            },
+            options: {
+                ...commonOptions,
+                plugins: { ...commonOptions.plugins, title: { display: true, text: 'Velocity vs. Time' } },
+                scales: { x: { title: { display: true, text: 'Time (s)' }, ticks: { maxTicksLimit: 8 } }, y: { title: { display: true, text: 'Velocity (m/s)' } } }
+            }
+        });
+
+        // 3. Phase Space (v vs x)
+        const phaseChart = new Chart(ctxPhase, {
+            type: 'scatter',
+            data: { datasets: [{ label: 'Phase Space', data: [], borderColor: '#28a745', backgroundColor: 'transparent', borderWidth: 2, showLine: true, pointRadius: 0 }] },
+            options: {
+                ...commonOptions,
+                plugins: { ...commonOptions.plugins, title: { display: true, text: 'Phase Space (v vs x)' } },
+                scales: { x: { title: { display: true, text: 'Position (m)' } }, y: { title: { display: true, text: 'Velocity (m/s)' } } }
+            }
+        });
+
+        // 4. Acceleration vs Position (NEW)
+        const accPosChart = new Chart(ctxAccPos, {
+            type: 'scatter',
+            data: { datasets: [{ label: 'a vs x', data: [], borderColor: '#fd7e14', backgroundColor: 'transparent', borderWidth: 2, showLine: true, pointRadius: 0 }] },
+            options: {
+                ...commonOptions,
+                plugins: { ...commonOptions.plugins, title: { display: true, text: 'Acceleration vs. Position' } },
+                scales: { 
+                    x: { title: { display: true, text: 'Position (m)' } }, 
+                    y: { title: { display: true, text: 'Acceleration (m/s²)' }, reverse: false } // Fixed: No reverse to show physical relationship (negative slope)
+                }
+            }
+        });
+
+        // 5. Energies vs Time
+        const energyTimeChart = new Chart(ctxEnergyTime, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'Kinetic (KE)', data: [], borderColor: '#dc3545', borderWidth: 1.5, pointRadius: 0 },
+                    { label: 'Potential (PE)', data: [], borderColor: '#007bff', borderWidth: 1.5, pointRadius: 0 },
+                    { label: 'Total (ME)', data: [], borderColor: '#28a745', borderWidth: 2, borderDash: [5,5], pointRadius: 0 }
+                ]
+            },
+            options: {
+                ...commonOptions,
+                plugins: { title: { display: true, text: 'Energies vs. Time' } },
+                scales: { x: { title: { display: true, text: 'Time (s)' }, ticks: { maxTicksLimit: 8 } }, y: { title: { display: true, text: 'Energy (J)' }, min: 0 } }
+            }
+        });
+
+        // 6. Energy vs Position (Combined PE and KE)
+        const energyPosChart = new Chart(ctxEnergyPos, {
+            type: 'line',
+            data: {
+                labels: [], // Not used for scatter/line combo usually, but needed for Chart.js struct
+                datasets: [
+                    { 
+                        type: 'line',
+                        label: 'Potential U(x) Ideal', 
+                        data: [], // Filled with ideal parabola
+                        borderColor: '#6f42c1', 
+                        borderWidth: 1, 
+                        pointRadius: 0, 
+                        borderDash: [5,5],
+                        fill: true, 
+                        backgroundColor: 'rgba(111, 66, 193, 0.1)' 
+                    },
+                    {
+                        type: 'scatter',
+                        label: 'Actual PE vs x',
+                        data: [],
+                        borderColor: '#007bff',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        showLine: true,
+                        pointRadius: 0
+                    },
+                    {
+                        type: 'scatter',
+                        label: 'Actual KE vs x',
+                        data: [],
+                        borderColor: '#dc3545', // Red for Kinetic
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        showLine: true,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                ...commonOptions,
+                plugins: { title: { display: true, text: 'Energies vs. Position' } },
+                scales: { 
+                    x: { 
+                        type: 'linear', 
+                        position: 'bottom',
+                        title: { display: true, text: 'Position (m)' }
+                    }, 
+                    y: { title: { display: true, text: 'Energy (J)' }, min: 0 } 
+                }
+            }
+        });
+
+        function updateChartsTheme(isDark) {
+            const textColor = isDark ? '#e0e0e0' : '#666';
+            const gridColor = isDark ? '#444' : '#e5e5e5';
+            
+            [posChart, velChart, phaseChart, accPosChart, energyTimeChart, energyPosChart].forEach(chart => {
+                // Update Scales
+                Object.keys(chart.options.scales).forEach(key => {
+                    const scale = chart.options.scales[key];
+                    if (scale.ticks) scale.ticks.color = textColor;
+                    if (scale.title) scale.title.color = textColor;
+                    if (scale.grid) scale.grid.color = gridColor;
+                });
+                // Update Title
+                if (chart.options.plugins.title) {
+                    chart.options.plugins.title.color = textColor;
+                }
+                // Update Legend Labels (if visible in future)
+                if (chart.options.plugins.legend) {
+                    chart.options.plugins.legend.labels.color = textColor;
+                }
+                chart.update();
+            });
+        }
+
+
+        // --- UI Updates ---
+        function updateSimulation() {
+            // Update config
+            config.m = parseFloat(document.getElementById('slider-m').value);
+            config.k = parseFloat(document.getElementById('slider-k').value);
+            config.b = parseFloat(document.getElementById('slider-b').value);
+            config.x0 = parseFloat(document.getElementById('slider-x0').value);
+
+            // Update Labels
+            document.getElementById('val-m').textContent = config.m.toFixed(1) + " kg";
+            document.getElementById('val-k').textContent = config.k.toFixed(0) + " N/m";
+            document.getElementById('val-b').textContent = config.b.toFixed(1) + " kg/s";
+            document.getElementById('val-x0').textContent = config.x0.toFixed(1) + " m";
+
+            // Calculate Data
+            const data = calculateTrajectory();
+
+            // Update UI Text
+            const titleElem = document.getElementById('regime-title');
+            titleElem.textContent = data.regime;
+            titleElem.style.color = data.color;
+            document.querySelector('.regime-indicator').style.borderLeftColor = data.color;
+            document.getElementById('regime-info').textContent = "Critical Damping (bc): " + data.bc.toFixed(2) + " kg/s";
+
+            // 1. Update Position Chart
+            posChart.data.labels = data.tPoints;
+            posChart.data.datasets[0].data = data.xPoints;
+            posChart.data.datasets[1].data = data.envUpper;
+            posChart.data.datasets[2].data = data.envLower;
+            // Auto-scale Y
+            const maxDisp = Math.max(Math.abs(Math.min(...data.xPoints)), Math.abs(Math.max(...data.xPoints))) * 1.2;
+            posChart.options.scales.y.min = -Math.max(1.5, maxDisp);
+            posChart.options.scales.y.max = Math.max(1.5, maxDisp);
+            posChart.update();
+
+            // 2. Update Velocity Chart
+            velChart.data.labels = data.tPoints;
+            velChart.data.datasets[0].data = data.vPoints;
+            const maxVel = Math.max(Math.abs(Math.min(...data.vPoints)), Math.abs(Math.max(...data.vPoints))) * 1.2;
+            velChart.options.scales.y.min = -Math.max(2, maxVel);
+            velChart.options.scales.y.max = Math.max(2, maxVel);
+            velChart.update();
+
+            // 3. Update Phase Chart
+            const phaseData = data.xPoints.map((x, i) => ({ x: x, y: data.vPoints[i] }));
+            phaseChart.data.datasets[0].data = phaseData;
+            phaseChart.options.scales.x.min = posChart.options.scales.y.min;
+            phaseChart.options.scales.x.max = posChart.options.scales.y.max;
+            phaseChart.options.scales.y.min = velChart.options.scales.y.min;
+            phaseChart.options.scales.y.max = velChart.options.scales.y.max;
+            phaseChart.update();
+
+            // 4. Update Acceleration vs Position Chart (NEW)
+            const accPosData = data.xPoints.map((x, i) => ({ x: x, y: data.aPoints[i] }));
+            accPosChart.data.datasets[0].data = accPosData;
+            accPosChart.options.scales.x.min = posChart.options.scales.y.min;
+            accPosChart.options.scales.x.max = posChart.options.scales.y.max;
+            accPosChart.update();
+
+            // 5. Update Energies Time Chart
+            energyTimeChart.data.labels = data.tPoints;
+            energyTimeChart.data.datasets[0].data = data.kePoints;
+            energyTimeChart.data.datasets[1].data = data.pePoints;
+            energyTimeChart.data.datasets[2].data = data.mePoints;
+            energyTimeChart.update();
+
+            // 6. Update Energy vs Position Chart (Updated)
+            // Ideal PE parabola
+            const idealPeData = data.xRange.map((x, i) => ({ x: x, y: data.epeCurve[i] }));
+            // Actual PE vs x (Scatter for trajectory)
+            const actualPeData = data.xPoints.map((x, i) => ({ x: x, y: data.pePoints[i] }));
+            // Actual KE vs x (Scatter for trajectory)
+            const actualKeData = data.xPoints.map((x, i) => ({ x: x, y: data.kePoints[i] }));
+
+            energyPosChart.data.datasets[0].data = idealPeData; // Background Parabola
+            energyPosChart.data.datasets[1].data = actualPeData; // Actual PE Trace
+            energyPosChart.data.datasets[2].data = actualKeData; // Actual KE Trace
+            
+            energyPosChart.options.scales.x.min = posChart.options.scales.y.min;
+            energyPosChart.options.scales.x.max = posChart.options.scales.y.max;
+            energyPosChart.update();
+        }
+
+        // --- Event Listeners ---
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', updateSimulation);
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.getElementById('slider-m').value = 2.0;
+            document.getElementById('slider-k').value = 50;
+            document.getElementById('slider-b').value = 1.0;
+            document.getElementById('slider-x0').value = 1.0;
+            updateSimulation();
+        });
+
+        // Initial Run
+        updateSimulation();
+
+    </script>
+</body>
+</html>

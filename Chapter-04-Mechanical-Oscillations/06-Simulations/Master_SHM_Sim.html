@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced SHM Laboratory | Physics 12</title>
+    
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- MathJax for LaTeX Rendering -->
+    <script>
+        tailwind.config = { darkMode: 'class' };
+        window.MathJax = { 
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, 
+            svg: { fontCache: 'global' } 
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Custom scrollbar for lab feel */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+        /* Canvas container consistency */
+        .chart-wrapper { position: relative; height: 200px; width: 100%; }
+        .energy-bar-wrapper { position: relative; height: 200px; width: 100%; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden transition-colors duration-300">
+
+    <!-- Navbar -->
+    <header class="bg-slate-800 dark:bg-slate-950 text-white p-3 shadow-md flex justify-between items-center z-50 shrink-0 border-b border-slate-700">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center font-bold text-lg shadow-inner border border-indigo-400">
+                &omega;
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Advanced SHM Laboratory</h1>
+                <p class="text-xs text-slate-400">Grade 12 Physics • Symplectic Integrator</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+             <div class="text-xs text-right hidden sm:block text-slate-400">
+                <p>System: Mass-Spring</p>
+                <p>Integrator: Semi-Implicit Euler</p>
+            </div>
+            <!-- Theme Toggle with specific requested colors -->
+            <button onclick="ui.toggleTheme()" id="btn-theme" class="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-all border border-slate-600 text-xl">
+                🌙
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- SIDEBAR CONTROLS -->
+        <aside class="w-80 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0 overflow-y-auto shadow-xl z-40">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Playback</h2>
+                <div class="flex gap-2">
+                    <button id="btn-play" onclick="sim.togglePlay()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded font-bold transition-colors flex justify-center items-center gap-2 shadow-sm">
+                        <span id="icon-play">▶</span> <span id="text-play">Simulate</span>
+                    </button>
+                    <button onclick="sim.reset()" class="px-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded transition-colors" title="Reset t=0">
+                        ↺
+                    </button>
+                </div>
+                <div class="mt-2 text-center">
+                    <span class="text-xs font-mono text-slate-500">Time: <span id="lbl-time" class="text-slate-900 dark:text-white font-bold">0.00</span> s</span>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Parameters -->
+                <div>
+                    <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-4">System Parameters</h3>
+                    
+                    <!-- Mass -->
+                    <div class="mb-5 group">
+                        <div class="flex justify-between text-sm mb-1">
+                            <label>Mass ($m$)</label>
+                            <span class="mono font-bold text-indigo-600 dark:text-indigo-400"><span id="val-m">1.0</span> kg</span>
+                        </div>
+                        <input type="range" id="in-m" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:bg-slate-700" oninput="ui.updateParams()">
+                    </div>
+
+                    <!-- Spring Constant -->
+                    <div class="mb-5 group">
+                        <div class="flex justify-between text-sm mb-1">
+                            <label>Spring Constant ($k$)</label>
+                            <span class="mono font-bold text-indigo-600 dark:text-indigo-400"><span id="val-k">10</span> N/m</span>
+                        </div>
+                        <input type="range" id="in-k" min="1" max="100" step="1" value="10" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:bg-slate-700" oninput="ui.updateParams()">
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-200 dark:border-slate-700 pt-6">
+                    <h3 class="text-xs font-bold text-rose-500 uppercase tracking-widest mb-4">Initial Conditions ($t=0$)</h3>
+                    
+                    <!-- Initial Position -->
+                    <div class="mb-5 group">
+                        <div class="flex justify-between text-sm mb-1">
+                            <label>Position ($x_0$)</label>
+                            <span class="mono font-bold text-rose-500"><span id="val-x0">0.50</span> m</span>
+                        </div>
+                        <input type="range" id="in-x0" min="-1.5" max="1.5" step="0.05" value="0.5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-500 dark:bg-slate-700" oninput="ui.updateParams()">
+                    </div>
+
+                    <!-- Initial Velocity -->
+                    <div class="mb-5 group">
+                        <div class="flex justify-between text-sm mb-1">
+                            <label>Velocity ($v_0$)</label>
+                            <span class="mono font-bold text-rose-500"><span id="val-v0">0.00</span> m/s</span>
+                        </div>
+                        <input type="range" id="in-v0" min="-5.0" max="5.0" step="0.1" value="0.0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-500 dark:bg-slate-700" oninput="ui.updateParams()">
+                    </div>
+                </div>
+
+                <!-- Calculated Stats -->
+                <div class="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-2">System Properties</h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="block text-slate-500">Period ($T$)</span>
+                            <span id="out-T" class="font-bold mono text-sm">--</span>
+                        </div>
+                        <div>
+                            <span class="block text-slate-500">Freq ($f$)</span>
+                            <span id="out-f" class="font-bold mono text-sm">--</span>
+                        </div>
+                        <div class="col-span-2 border-t border-slate-200 dark:border-slate-800 my-1"></div>
+                        <div>
+                            <span class="block text-slate-500">Amplitude ($A$)</span>
+                            <span id="out-A" class="font-bold mono text-emerald-500 text-sm">--</span>
+                        </div>
+                        <div>
+                            <span class="block text-slate-500">Total Energy ($ME$)</span>
+                            <span id="out-E" class="font-bold mono text-amber-500 text-sm">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN LAB AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 scroll-smooth">
+            
+            <!-- ROW 1: Visualizer & Live Energy -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+                <!-- Physical Simulation View -->
+                <div class="xl:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-1 flex flex-col">
+                    <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/30 rounded-t-lg">
+                        <h3 class="font-bold text-sm text-slate-600 dark:text-slate-300">Lab Bench</h3>
+                        <span class="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500">Canvas Rendering</span>
+                    </div>
+                    <div class="relative w-full h-64 bg-slate-50 dark:bg-slate-950 rounded-b-lg overflow-hidden cursor-crosshair">
+                        <canvas id="sim-canvas" class="w-full h-full block"></canvas>
+                        <div class="absolute bottom-2 left-2 text-[10px] font-mono text-slate-400 pointer-events-none">
+                            x=0 at center • dashed line = equilibrium
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Energy Monitor -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 flex flex-col">
+                    <h3 class="font-bold text-sm text-slate-600 dark:text-slate-300 mb-4 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Live Energy Monitor
+                    </h3>
+                    <div class="energy-bar-wrapper flex-1">
+                        <canvas id="chart-energy-bar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 2: Kinematics (Time Domain) -->
+            <section class="mb-6">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span class="w-8 h-[1px] bg-slate-400"></span> Kinematics vs Time
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-3">
+                        <div class="chart-wrapper"><canvas id="chart-xt"></canvas></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-3">
+                        <div class="chart-wrapper"><canvas id="chart-vt"></canvas></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-3">
+                        <div class="chart-wrapper"><canvas id="chart-at"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ROW 3: Dynamics & Energetics -->
+            <section>
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span class="w-8 h-[1px] bg-slate-400"></span> Dynamics & Energetics
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <!-- Dynamics: a vs x -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-3">
+                        <h4 class="text-[10px] font-bold text-slate-400 uppercase text-center mb-1">Restoring Force ($a$ vs $x$)</h4>
+                        <div class="chart-wrapper"><canvas id="chart-ax"></canvas></div>
+                    </div>
+                    
+                    <!-- Energy vs Time -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-3">
+                        <h4 class="text-[10px] font-bold text-slate-400 uppercase text-center mb-1">Energy vs Time</h4>
+                        <div class="chart-wrapper"><canvas id="chart-et"></canvas></div>
+                    </div>
+
+                    <!-- Energy vs Position -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-3">
+                        <h4 class="text-[10px] font-bold text-slate-400 uppercase text-center mb-1">Potential Well ($E$ vs $x$)</h4>
+                        <div class="chart-wrapper"><canvas id="chart-ex"></canvas></div>
+                    </div>
+                </div>
+            </section>
+            
+            <div class="h-10"></div>
+        </main>
+    </div>
+
+    <script>
+        // ==========================================
+        // PHYSICS ENGINE (Symplectic Integrator)
+        // ==========================================
+        const physics = {
+            t: 0, x: 0, v: 0,
+            m: 1, k: 10,
+            
+            history: { t: [], x: [], v: [], a: [], K: [], U: [], E: [] },
+            
+            // Separate Reset for State (Position/Velocity) vs Data
+            resetState: function(x0, v0) {
+                this.t = 0; 
+                this.x = x0; 
+                this.v = v0;
+            },
+
+            resetHistory: function() {
+                this.history = { t: [], x: [], v: [], a: [], K: [], U: [], E: [] };
+            },
+
+            step: function(dt) {
+                // Sub-stepping to reduce energy fluctuation (Symplectic error scales with dt)
+                // This preserves the Symplectic Euler method but increases precision
+                const subSteps = 10; 
+                const sdt = dt / subSteps;
+                let lastA = 0;
+
+                for(let i=0; i<subSteps; i++) {
+                    const a = -(this.k / this.m) * this.x;
+                    this.v = this.v + a * sdt; 
+                    this.x = this.x + this.v * sdt;
+                    this.t += sdt;
+                    lastA = a;
+                }
+                return lastA;
+            },
+
+            preCalculate: function(duration, dt) {
+                const x0 = this.x; 
+                const v0 = this.v;
+                
+                // Clear history and reset state for calculation
+                this.resetState(x0, v0);
+                this.resetHistory();
+
+                const steps = Math.floor(duration / dt);
+                
+                for(let i = 0; i <= steps; i++) {
+                    const currentA = -(this.k / this.m) * this.x;
+                    const K = 0.5 * this.m * this.v * this.v;
+                    const U = 0.5 * this.k * this.x * this.x;
+                    
+                    if (i % 5 === 0) { // Decimate for performance
+                        this.history.t.push(this.t.toFixed(2));
+                        this.history.x.push(this.x);
+                        this.history.v.push(this.v);
+                        this.history.a.push(currentA);
+                        this.history.K.push(K);
+                        this.history.U.push(U);
+                        this.history.E.push(K + U);
+                    }
+                    this.step(dt);
+                }
+                
+                // Reset state back to initial for playback, BUT KEEP HISTORY
+                this.resetState(x0, v0);
+            }
+        };
+
+        // ==========================================
+        // UI & VISUALIZATION CONTROLLER
+        // ==========================================
+        const ui = {
+            isDark: false, isPlaying: false, animFrameId: null,
+            canvas: null,
+            ctx: null,
+            charts: {},
+
+            init: function() {
+                // Safe DOM Initialization
+                this.canvas = document.getElementById('sim-canvas');
+                if(this.canvas) {
+                    this.ctx = this.canvas.getContext('2d');
+                    this.resizeCanvas();
+                    window.addEventListener('resize', () => this.resizeCanvas());
+                }
+
+                if (typeof Chart !== 'undefined') {
+                    this.setupCharts();
+                } else {
+                    console.error("Chart.js not loaded");
+                }
+                
+                this.updateParams();
+            },
+
+            toggleTheme: function() {
+                this.isDark = !this.isDark;
+                document.documentElement.classList.toggle('dark');
+                const btn = document.getElementById('btn-theme');
+                if(this.isDark) {
+                    btn.textContent = "☀"; btn.className = "p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-all border border-slate-600 text-xl text-yellow-400";
+                } else {
+                    btn.textContent = "🌙"; btn.className = "p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-all border border-slate-600 text-xl text-slate-400";
+                }
+                this.updateChartTheme();
+                this.drawFrame();
+            },
+
+            resizeCanvas: function() {
+                if(!this.canvas) return;
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.drawFrame();
+            },
+
+            updateParams: function() {
+                const elM = document.getElementById('in-m');
+                if(!elM) return;
+
+                const m = parseFloat(elM.value);
+                const k = parseFloat(document.getElementById('in-k').value);
+                const x0 = parseFloat(document.getElementById('in-x0').value);
+                const v0 = parseFloat(document.getElementById('in-v0').value);
+
+                physics.m = m; physics.k = k;
+                
+                document.getElementById('val-m').textContent = m.toFixed(1);
+                document.getElementById('val-k').textContent = k.toFixed(0);
+                document.getElementById('val-x0').textContent = x0.toFixed(2);
+                document.getElementById('val-v0').textContent = v0.toFixed(2);
+
+                // Derived Stats
+                const w = Math.sqrt(k/m);
+                const T = (2 * Math.PI) / w;
+                const f = 1/T;
+                const E = 0.5*k*x0*x0 + 0.5*m*v0*v0;
+                // Amplitude: A = sqrt(x0^2 + (v0/w)^2)
+                const A = Math.sqrt(x0*x0 + (v0/w)*(v0/w));
+
+                document.getElementById('out-T').textContent = T.toFixed(2) + " s";
+                document.getElementById('out-f').textContent = f.toFixed(2) + " Hz";
+                document.getElementById('out-E').textContent = E.toFixed(3) + " J";
+                document.getElementById('out-A').textContent = A.toFixed(3) + " m";
+
+                // Set initial physics state
+                physics.resetState(x0, v0);
+
+                // Pre-calculate history for graphs (runs sim, saves history, resets state)
+                physics.preCalculate(3 * T, 0.01);
+
+                // Update charts with the new history
+                this.updateStaticCharts();
+                
+                // Reset playback
+                this.stopSim();
+                document.getElementById('lbl-time').textContent = "0.00";
+                this.drawFrame();
+                this.updateBarChart();
+            },
+
+            drawFrame: function() {
+                if(!this.ctx) return;
+                const w = this.canvas.width; const h = this.canvas.height;
+                const cx = w / 2; const cy = h / 2; const ctx = this.ctx;
+                
+                ctx.clearRect(0, 0, w, h);
+                const colorGrid = this.isDark ? '#334155' : '#e2e8f0';
+                const colorWall = this.isDark ? '#475569' : '#94a3b8';
+                const colorSpring = this.isDark ? '#cbd5e1' : '#475569';
+                const colorBlock = this.isDark ? '#6366f1' : '#4f46e5';
+
+                // Grid
+                ctx.beginPath(); ctx.strokeStyle = colorGrid; ctx.setLineDash([5, 5]);
+                ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke(); ctx.setLineDash([]);
+
+                // System
+                const scale = (w - 100) / 3.0; 
+                const blockX = cx + physics.x * scale;
+                const blockY = cy + 20; 
+                const blockSize = 50;
+
+                ctx.fillStyle = colorWall; ctx.fillRect(0, 20, 30, h-40);
+
+                ctx.beginPath(); ctx.strokeStyle = colorSpring; ctx.lineWidth = 3;
+                const startX = 30; const endX = blockX - blockSize/2; const coils = 12;
+                ctx.moveTo(startX, blockY);
+                for(let i=0; i<=coils; i++) {
+                    const x = startX + (endX - startX) * (i/coils);
+                    if(i===0) ctx.lineTo(x, blockY);
+                    else ctx.lineTo(x - (endX-startX)/(coils*2), blockY + ((i%2===0)?10:-10));
+                    ctx.lineTo(x, blockY);
+                }
+                ctx.stroke();
+
+                ctx.fillStyle = colorBlock;
+                ctx.fillRect(blockX - blockSize/2, blockY - blockSize/2, blockSize, blockSize);
+                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('m', blockX, blockY);
+
+                if (Math.abs(physics.x) > 0.05) this.drawArrow(cx, cy - 40, blockX, cy - 40, this.isDark?'#f43f5e':'#e11d48', 'x');
+            },
+
+            drawArrow: function(fromX, fromY, toX, toY, color, label) {
+                if(!this.ctx) return;
+                const ctx = this.ctx; const headlen = 8; const angle = Math.atan2(toY - fromY, toX - fromX);
+                ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2;
+                ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY); ctx.stroke();
+                ctx.beginPath(); ctx.fillStyle = color;
+                ctx.moveTo(toX, toY);
+                ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI/6), toY - headlen * Math.sin(angle - Math.PI/6));
+                ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI/6), toY - headlen * Math.sin(angle + Math.PI/6));
+                ctx.fill();
+                ctx.fillText(label, (fromX+toX)/2, fromY - 8);
+            },
+
+            setupCharts: function() {
+                const opts = {
+                    responsive: true, maintainAspectRatio: false, animation: false,
+                    elements: { point: { radius: 0 } },
+                    interaction: { mode: 'nearest', intersect: false },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
+                        y: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } }
+                    }
+                };
+
+                // 1. Live Energy Bar
+                const cvsEnergy = document.getElementById('chart-energy-bar');
+                if(cvsEnergy) {
+                    this.charts.energyBar = new Chart(cvsEnergy, {
+                        type: 'bar',
+                        data: {
+                            labels: ['KE', 'EPE', 'ME'],
+                            datasets: [{ data: [0,0,0], backgroundColor: ['#10b981', '#f59e0b', '#64748b'], borderRadius: 4 }]
+                        },
+                        options: { ...opts, scales: { x: {display:false}, y: {beginAtZero: true} } }
+                    });
+                }
+
+                // 2. Kinematics (x-t, v-t, a-t)
+                const cvsXt = document.getElementById('chart-xt');
+                if(cvsXt) {
+                    this.charts.xt = new Chart(cvsXt, {
+                        type: 'line', data: { datasets: [{ label: 'x(t)', borderColor: '#3b82f6', borderWidth: 2, tension: 0.4 }] },
+                        options: { ...opts, plugins: { title: {display:true, text:'Position (m)'} } }
+                    });
+                }
+                const cvsVt = document.getElementById('chart-vt');
+                if(cvsVt) {
+                    this.charts.vt = new Chart(cvsVt, {
+                        type: 'line', data: { datasets: [{ label: 'v(t)', borderColor: '#ef4444', borderWidth: 2, tension: 0.4 }] },
+                        options: { ...opts, plugins: { title: {display:true, text:'Velocity (m/s)'} } }
+                    });
+                }
+                const cvsAt = document.getElementById('chart-at');
+                if(cvsAt) {
+                    this.charts.at = new Chart(cvsAt, {
+                        type: 'line', data: { datasets: [{ label: 'a(t)', borderColor: '#8b5cf6', borderWidth: 2, tension: 0.4 }] },
+                        options: { ...opts, plugins: { title: {display:true, text:'Acceleration (m/s²)'} } }
+                    });
+                }
+
+                // 3. Dynamics (a vs x)
+                const cvsAx = document.getElementById('chart-ax');
+                if(cvsAx) {
+                    this.charts.ax = new Chart(cvsAx, {
+                        type: 'scatter', data: { datasets: [{ label: 'a vs x', borderColor: '#f97316', borderWidth: 2, showLine: true }] },
+                        options: { ...opts, scales: { x: {title:{display:true, text:'Pos (m)'}}, y: {title:{display:true, text:'Acc (m/s²)'}} } }
+                    });
+                }
+
+                // 4. Energy vs Time (Multi-line)
+                const cvsEt = document.getElementById('chart-et');
+                if(cvsEt) {
+                    this.charts.et = new Chart(cvsEt, {
+                        type: 'line',
+                        data: { datasets: [
+                            { label: 'KE', borderColor: '#10b981', borderWidth: 2, pointRadius: 0 },
+                            { label: 'EPE', borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0 },
+                            { label: 'ME', borderColor: '#64748b', borderWidth: 2, borderDash: [5,5], pointRadius: 0 }
+                        ]},
+                        options: { ...opts, plugins: { legend: {display: true, labels:{boxWidth:10}} } }
+                    });
+                }
+
+                // 5. Energy vs Position (Multi-line scatter)
+                const cvsEx = document.getElementById('chart-ex');
+                if(cvsEx) {
+                    this.charts.ex = new Chart(cvsEx, {
+                        type: 'scatter',
+                        data: { datasets: [
+                            { label: 'KE', borderColor: '#10b981', borderWidth: 2, showLine: true, pointRadius: 0 },
+                            { label: 'EPE', borderColor: '#f59e0b', borderWidth: 2, showLine: true, pointRadius: 0 },
+                            { label: 'ME', borderColor: '#64748b', borderWidth: 2, showLine: true, borderDash: [5,5], pointRadius: 0 }
+                        ]},
+                        options: { ...opts, scales: { x: {title:{display:true, text:'Pos (m)'}} }, plugins: { legend: {display: true, labels:{boxWidth:10}} } }
+                    });
+                }
+            },
+
+            updateStaticCharts: function() {
+                const h = physics.history;
+                
+                // Helper to update only if chart exists
+                const updateIfExist = (chart, fn) => { if(chart) { fn(chart); chart.update(); } };
+
+                updateIfExist(this.charts.xt, c => { c.data.labels = h.t; c.data.datasets[0].data = h.x; });
+                updateIfExist(this.charts.vt, c => { c.data.labels = h.t; c.data.datasets[0].data = h.v; });
+                updateIfExist(this.charts.at, c => { c.data.labels = h.t; c.data.datasets[0].data = h.a; });
+                
+                updateIfExist(this.charts.ax, c => { c.data.datasets[0].data = h.x.map((x, i) => ({x, y: h.a[i]})); });
+
+                updateIfExist(this.charts.et, c => {
+                    c.data.labels = h.t;
+                    c.data.datasets[0].data = h.K;
+                    c.data.datasets[1].data = h.U;
+                    c.data.datasets[2].data = h.E;
+                });
+
+                updateIfExist(this.charts.ex, c => {
+                    c.data.datasets[0].data = h.x.map((x, i) => ({x, y: h.K[i]}));
+                    c.data.datasets[1].data = h.x.map((x, i) => ({x, y: h.U[i]}));
+                    c.data.datasets[2].data = h.x.map((x, i) => ({x, y: h.E[i]}));
+                });
+
+                // Update Bar Scale
+                if(this.charts.energyBar) {
+                    const maxE = Math.max(...h.E);
+                    this.charts.energyBar.options.scales.y.max = maxE * 1.2;
+                    this.charts.energyBar.update();
+                }
+            },
+
+            updateBarChart: function() {
+                if(!this.charts.energyBar) return;
+                const K = 0.5 * physics.m * physics.v * physics.v;
+                const U = 0.5 * physics.k * physics.x * physics.x;
+                const E = K + U;
+                this.charts.energyBar.data.datasets[0].data = [K, U, E];
+                this.charts.energyBar.update();
+            },
+
+            updateChartTheme: function() {
+                const gridCol = this.isDark ? '#334155' : '#e2e8f0';
+                const textCol = this.isDark ? '#94a3b8' : '#64748b';
+                
+                Object.values(this.charts).forEach(c => {
+                    if(c.options.scales.x) {
+                        c.options.scales.x.grid.color = gridCol; c.options.scales.x.ticks.color = textCol;
+                        if(c.options.scales.x.title) c.options.scales.x.title.color = textCol;
+                    }
+                    if(c.options.scales.y) {
+                        c.options.scales.y.grid.color = gridCol; c.options.scales.y.ticks.color = textCol;
+                        if(c.options.scales.y.title) c.options.scales.y.title.color = textCol;
+                    }
+                    if(c.options.plugins.legend) c.options.plugins.legend.labels.color = textCol;
+                    if(c.options.plugins.title) c.options.plugins.title.color = textCol;
+                    c.update();
+                });
+            },
+
+            startSim: function() {
+                this.isPlaying = true; const dt = 0.016;
+                const loop = () => {
+                    if (!this.isPlaying) return;
+                    physics.step(dt);
+                    this.drawFrame(); this.updateBarChart();
+                    document.getElementById('lbl-time').textContent = physics.t.toFixed(2);
+                    this.animFrameId = requestAnimationFrame(loop);
+                };
+                this.animFrameId = requestAnimationFrame(loop);
+                document.getElementById('icon-play').textContent = '⏸';
+                document.getElementById('text-play').textContent = 'Pause';
+                document.getElementById('btn-play').classList.replace('bg-emerald-600', 'bg-amber-600');
+                document.getElementById('btn-play').classList.replace('hover:bg-emerald-500', 'hover:bg-amber-500');
+            },
+
+            stopSim: function() {
+                this.isPlaying = false; cancelAnimationFrame(this.animFrameId);
+                document.getElementById('icon-play').textContent = '▶';
+                document.getElementById('text-play').textContent = 'Simulate';
+                document.getElementById('btn-play').classList.replace('bg-amber-600', 'bg-emerald-600');
+                document.getElementById('btn-play').classList.replace('hover:bg-amber-500', 'hover:bg-emerald-500');
+            },
+            togglePlay: function() { this.isPlaying ? this.stopSim() : this.startSim(); },
+            reset: function() {
+                const x0 = parseFloat(document.getElementById('in-x0').value);
+                const v0 = parseFloat(document.getElementById('in-v0').value);
+                this.stopSim(); 
+                physics.resetState(x0, v0); // Only reset state, keeps data history
+                document.getElementById('lbl-time').textContent = "0.00";
+                this.drawFrame(); 
+                this.updateBarChart();
+            }
+        };
+        
+        const sim = ui;
+        // Robust initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ui.init());
+        } else {
+            ui.init();
+        }
+    </script>
+</body>
+</html>
